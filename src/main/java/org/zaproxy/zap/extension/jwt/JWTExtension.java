@@ -19,6 +19,7 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.MalformedURLException;
@@ -54,12 +55,21 @@ public class JWTExtension extends ExtensionAdaptor {
     @Override
     public void hook(ExtensionHook extensionHook) {
         super.hook(extensionHook);
-
+        //initialize props
+        JWTI18n.init();
         try {
             LOGGER.error("JWT Extension");
+            //jwtMenu is not working for now.
             ExtensionPopupMenu jwtMenu =
                     new ExtensionPopupMenuMessageContainer(
-                            JWTI18n.getMessage("jwt.popup.mainmenu"));
+                            JWTI18n.getMessage("jwt.popup.mainmenu")) {
+            	 private static final long serialVersionUID = 1321249475392775487L;
+
+            	 @Override
+            	    public boolean isEnableForComponent(Component invoker) {
+            	        return true;
+            	    }
+            };
             jwtMenu.addActionListener(
                     new ActionListener() {
                         @Override
@@ -76,6 +86,8 @@ public class JWTExtension extends ExtensionAdaptor {
                         @Override
                         public void actionPerformed(ActionEvent e) {
                         	LOGGER.error("JWT Settings item");
+                        	//Adding dummy code for JWT here.
+                        	
                         }
                     });
             extensionHook.getHookMenu().addToolsMenuItem(jwtActiveEditorMenu);
