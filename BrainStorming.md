@@ -58,6 +58,17 @@ method which is
 now say server is expecting to verify the algorithm using RSA and say hacker has signed the token with Public key and set
 the Algorithm as "HS" ie HMAC with SHA then while calling verify method, server will send token and Public Key but the library will think HS as the algorithm so it will think verificationKey as HMAC secrete key and will return it as a valid.
 ```So Solution is that Algorithms to accept algorithm too.```
+but there can be a counter argument that if server is allowing multiple algorithms then how we can handle this usecase.
+Solution is using `kid` header field.
+
+Question is how kid is useful ?
+kid identified the Algorithm and Key both. 
+
+so say hacker has encrypted with public key and sends the algorithm as "HS". Also somehow hacker found both the `kids` for HS and RS algorithm then he/she provides kid of HS but while decrypting algorithm will use kid to get the key and the key will not match. Similarly say kid is mentioned as of RS then algorithm will not match and RSA will not work because decryption will not work.
+
+if we change above case little bit and send "RS" as algorithm and kid of RS then it will not work because of encryption issue due to Asymmetric nature. if kid of HS is provided then key will not match.
+
+
 3. 
 
 
