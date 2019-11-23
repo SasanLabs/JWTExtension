@@ -68,8 +68,8 @@ so say hacker has encrypted with public key and sends the algorithm as "HS". Als
 
 if we change above case little bit and send "RS" as algorithm and kid of RS then it will not work because of encryption issue due to Asymmetric nature. if kid of HS is provided then key will not match.
 
-
-3. 
+3. *Not storing JWT cookie as Secure and Http only.*
+4. *Storing JWT in local storage/session storage* -> Difference between local storage/session storage and Cookie is cookie cannot be retrieved with Javascript if hardened with Http only flag but local storage and session storage is accessed to javascript causing XSS attacks to exploit it.
 
 
 
