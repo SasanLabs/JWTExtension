@@ -62,7 +62,7 @@ but there can be a counter argument that if server is allowing multiple algorith
 Solution is using `kid` header field.
 
 Question is how kid is useful ?
-kid identified the Algorithm and Key both. 
+kid identifies the Algorithm and Key both. 
 
 so say hacker has encrypted with public key and sends the algorithm as "HS". Also somehow hacker found both the `kids` for HS and RS algorithm then he/she provides kid of HS but while decrypting algorithm will use kid to get the key and the key will not match. Similarly say kid is mentioned as of RS then algorithm will not match and RSA will not work because decryption will not work.
 
