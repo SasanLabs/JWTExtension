@@ -47,6 +47,23 @@ issue with second approach, say i know the collision in Hash of 2 message then s
 So HMAC is something like Hash(Key || Hash (Key || Message)) 
 ```
 
+### Some of the Attacks against JWT ###
+1. *none hashing algorithm*: none hashing algorithm is used by the JWT in case the 
+integrity of token is already verified. so incase an attacked sends none hashing algorithm 
+and signature as empty, it might be an issue. this was a vulnerability in many encryption algorithms.
+``` so solution is disallowing none hashing algorithm ```
+2. *which verification algorithm RSA or HMAC*: General issue in verification of token is the structure of verification 
+method which is 
+``` verify(string token, string verificationKey) ```
+now say server is expecting to verify the algorithm using RSA and say hacker has signed the token with Public key and set
+the Algorithm as "HS" ie HMAC with SHA then while calling verify method, server will send token and Public Key but the library will think HS as the algorithm so it will think verificationKey as HMAC secrete key and will return it as a valid.
+```So Solution is that Algorithms to accept algorithm too.```
+3. 
+
+
+
+
+
 
 
   
