@@ -33,10 +33,15 @@ there is little tweak to what is explained above as we will not encrypt the enti
 ```
 2. HMAC based or Symmetric Key based Algorithm,
 ```
-All the services communicating should know one key which is used to generate Hash using HMAC algorithm. Little background about HMAC, because hashes doesn't depend on key so rainbow table attacks are possible so people though of following possibilities :
+All the services communicating should know one key which is used to generate Hash using HMAC algorithm. 
+Little background about HMAC, because hashes doesn't depend on key so rainbow table attacks are possible 
+so people though of following possibilities :
 1. Key || Message and then Hashing.
 2. Message || Key and then Hashing.
-issue with first approach, say we are getting hash for Karan( say block size of Hash Function is 5) as adjandskajd, now if we want to compute the hash for Karanpreet, i don't need key, i only need the hash of Karan. Why ? because Hash functions works as a state machine and if i configure state to hash of Karan then preet, it will account preet too.
+issue with first approach, say we are getting hash for Karan( say block size of Hash Function is 5) as adjandskajd, 
+now if we want to compute the hash for Karanpreet, i don't need key, i only need the hash of Karan. Why ?
+because Hash functions works as a state machine and if i configure state to hash of Karan then preet, 
+it will account preet too.
 issue with second approach, say i know the collision in Hash of 2 message then same collision will exist in MAC too.
 
 So HMAC is something like Hash(Key || Hash (Key || Message)) 
