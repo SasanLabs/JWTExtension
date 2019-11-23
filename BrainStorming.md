@@ -16,15 +16,23 @@ Once a user logs in into the application, server provides the JWT token in the r
 
 ### *How to ensures that someone has not tempered the JWT ?* ###
 JWT tokens are digitally signed ie 
-1. In case of Asymmetric Algorithm, they are encrypted by the private key of the service which issues it, and as we know private key is only known to the service which has encrypted and someone with the public key of the service can easily verify that and if services/parties trust each other then this ensures that the issuer is authentic/trusted. Plus Asymmetric algorithm gives benefits of Non-Repudiation which is not there in Symmetric algorithm.
-
+1. In case of Asymmetric Algorithm,
+``` 
+they are encrypted by the private key of the service which issues it, and 
+as we know private key is only known to the service which has encrypted and 
+someone with the public key of the service can easily verify that and 
+if services/parties trust each other then this ensures that the issuer is authentic/trusted. 
+Plus Asymmetric algorithm gives benefits of Non-Repudiation which is not there in Symmetric algorithm.
+```
 there is little tweak to what is explained above as we will not encrypt the entire token but instead encrypt the Hash of the token. 
 ### *Why we are encrypting the Hash not the entire token ?* ###
+```
 1.1. Asymmetric algorithms are slow so if token is large then it can have a performance impact.
 1.2. Encryption algorithms doesn't provide integrity ie to know if something is modified. 
   1.2.1 Someone can modify one bit of encrypted data and decryption can be successful too.
-    
-  
+
+2. HMAC based or Symmetric Key based Algorithm,
+```
   
   
   
