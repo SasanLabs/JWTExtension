@@ -4,19 +4,20 @@ JSON web token is a self contained token for securely transmitting data between 
 1. Symmetric way : HMAC 
 2. or Asymmetric way : RSA or ECDSA
 
-## Structure of JWT token ##
+### Structure of JWT token ###
 ``` [Base64(HEADER)].[Base64(PAYLOAD)].[Base64(SIGNATURE)] ```
+
 Eg. ``` eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
 eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.
 TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ ```
 
-### Header ###
+#### Header ####
 ``` {
      "alg": "HS256",
      "typ": "JWT"
     } 
 ```
-### Payload ###
+#### Payload ####
 ```
     {
      "sub": "1234567890",
@@ -24,7 +25,7 @@ TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ ```
      "admin": true
     }
 ```
-### Signature ###
+#### Signature ####
 ```
 HMACSHA256( base64UrlEncode(header) + "." + base64UrlEncode(payload), KEY )
 ```
