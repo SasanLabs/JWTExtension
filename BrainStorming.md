@@ -110,7 +110,9 @@ Default behavior of browsers had changed from None to Lax.
 
 ##### Cookie Prefix: #####
 There are certain cases where a subdomain can read or overwrite the domain cookies ie say a subdomain A.B.com can overwrite B.com cookies. so in case a malicious subdomain or a subdomain having some issues can impact the cookie values.
+
 `__Secure` cookie name prefix is used to allow overwriting of the cookies only if done over secure channel ie secure attribute is required.
+
 `__Host-` cookie name prefix will not allow parent domains cookie overwriting and also requires secure channel ie it requires both Path and Secure attribute.
 
 [More information](https://googlechrome.github.io/samples/cookie-prefixes/) 
