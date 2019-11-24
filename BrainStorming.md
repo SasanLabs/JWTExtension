@@ -97,7 +97,18 @@ so say hacker has encrypted with public key and sends the algorithm as "HS". Als
 
 if we change above case little bit and send "RS" as algorithm and kid of RS then it will not work because of encryption issue due to Asymmetric nature. if kid of HS is provided then key will not match.
 
-#### *Not storing JWT cookie as Secure and Http only.* ####
+#### *Not storing JWT cookie as Secure, Httponly, SameSite and Cookie Prefix * ####
+Secure and HttpOnly are the simple flags which need to be set for any cookie. they ensure that cookies are send to the request if send over HTTPS and only available to Http Protocol and not accessible to JavaScript respectively.
+
+SameSite:
+a way to restrict cross site sending of cookies. there are three modes of SameSite:
+1. *Strict*, meaning say A.com set the cookies with Strict mode of SameSite and then user opened B.com then while navigating from B.com to A.com, will not send the cookie flagged as Strict.
+2. *Lax*, meaning Say A.com set the cookies with Lax mode of SameSite then when user opened B.com and then Get requests which changes the Top URL of browser like ahref or links, browser will send the cookies with lax flag but if top level url doesn't change then it will not send the lax cookie like in case of Ajax calls or Image rendering. Also Lax flagged cookies will not be sent in case of CSRF prone methods like POST/PUT/DELETE
+3. *None*, Send to A.com even while navigating from B.com
+
+Default behavior of browsers had changed from None to Lax.
+
+Cookie Prefix:
 
 #### *Storing JWT in local storage/session storage* #### 
 Difference between local storage/session storage and Cookie is cookie cannot be retrieved with Javascript if hardened with Http only flag but local storage and session storage is accessed to javascript causing XSS attacks to exploit it.
