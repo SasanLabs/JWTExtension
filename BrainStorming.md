@@ -129,11 +129,17 @@ little information about AEAD:
 AEAD is used in case we need Authentication and Integrity both ie Secrecy and Integrity.
 AEAD modes are:
 1. ``` Encrypt then Mac ```, encrypt the plain text and append the Mac of encrypted data with it. Gives integrity of encrypted data as well as secrecy of plain text. Key used for both Mac and plain text should be different else someone can read the plain text by bruteforcing the Mac.
+
 ![alt text](https://github.com/SasanLabs/JWTExtension/blob/master/Authenticated_Encryption_EtM.png)
+
 2. ``` Mac then Encrypt ```, compute Mac of plain text and then encrypt the Mac and send it. it doesn't give any integrity of encrypted data but plain text is having both secrecy and integrity.
+
 ![alt text](https://github.com/SasanLabs/JWTExtension/blob/master/Authenticated_Encryption_MtE.png)
+
 3. ``` Mac and Encrypt ```, encrypt the plain text and also compute mac of plain text and append. it doesn't give any integrity of encrypted data.
+
 ![alt text](https://github.com/SasanLabs/JWTExtension/blob/master/Authenticated_Encryption_EaM.png)
+
 ```approach 1 is recommended approach.```
 
 #### *Storing JWT in local storage/session storage* #### 
