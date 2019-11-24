@@ -117,6 +117,23 @@ There are certain cases where a subdomain can read or overwrite the domain cooki
 
 [More information](https://googlechrome.github.io/samples/cookie-prefixes/) 
 
+#### *No way to revoke JWT token issued untill expiry* ####
+JWT inherent behaviour is there is no way to revoke token before the expiry date so incase a user token is stealed there is not way to invalidate jwt token. so solution can be:
+
+when a user logs out storing jwt token hash with revoked date in revoke table and this table has higher precedence over the expiry date.
+
+#### *Information disclosure* ####
+In case sensitive internal information is stored in token then it is an issue as JWT is more about integrity of token and less about secrecy of information. so if we need secrecy then we might need to encrypt the token again making it secret. AEAD can be used for this usecase.
+
+little information about AEAD:
+AEAD is used in case we need Authentication and Integrity both ie Secrecy and Integrity.
+AEAD modes are:
+1. ``` Encrypt then Mac ```, encrypt the plain text and append the Mac of encrypted data with it. Gives integrity of encrypted data as well as secrecy of plain text. Key used for both Mac and plain text should be different else someone can read the plain text by bruteforcing the Mac.
+
+2. ``` Mac then Encrypt ```, compute Mac of plain text and then encrypt the Mac and send it. it doesn't give any integrity of encrypted data but plain text is having both secrecy and integrity.
+
+3. ``` Mac and Encrypt ```, encrypt the plain text and also compute mac of plain text and append. it doesn't give any integrity of encrypted data.
+approach 1 is recommended approach.
 
 #### *Storing JWT in local storage/session storage* #### 
 Difference between local storage/session storage and Cookie is cookie cannot be retrieved with Javascript if hardened with Http only flag but local storage and session storage is accessed to javascript causing XSS attacks to exploit it.
