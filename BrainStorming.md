@@ -97,26 +97,6 @@ so say hacker has encrypted with public key and sends the algorithm as "HS". Als
 
 if we change above case little bit and send "RS" as algorithm and kid of RS then it will not work because of encryption issue due to Asymmetric nature. if kid of HS is provided then key will not match.
 
-#### *Not storing JWT cookie as Secure, Httponly, SameSite and Cookie Prefix*: ####
-Secure and HttpOnly are the simple flags which need to be set for any cookie. they ensure that cookies are send to the request if send over HTTPS and only available to Http Protocol and not accessible to JavaScript respectively.
-
-##### SameSite: #####
-a way to restrict cross site sending of cookies. there are three modes of SameSite:
-1. *Strict*, meaning say A.com set the cookies with Strict mode of SameSite and then user opened B.com then while navigating from B.com to A.com, will not send the cookie flagged as Strict.
-2. *Lax*, meaning Say A.com set the cookies with Lax mode of SameSite then when user opened B.com and then Get requests which changes the Top URL of browser like ahref or links, browser will send the cookies with lax flag but if top level url doesn't change then it will not send the lax cookie like in case of Ajax calls or Image rendering. Also Lax flagged cookies will not be sent in case of CSRF prone methods like POST/PUT/DELETE
-3. *None*, Send to A.com even while navigating from B.com
-
-Default behavior of browsers had changed from None to Lax.
-
-##### Cookie Prefix: #####
-There are certain cases where a subdomain can read or overwrite the domain cookies ie say a subdomain A.B.com can overwrite B.com cookies. so in case a malicious subdomain or a subdomain having some issues can impact the cookie values.
-
-`__Secure` cookie name prefix is used to allow overwriting of the cookies only if done over secure channel ie secure attribute is required.
-
-`__Host-` cookie name prefix will not allow parent domains cookie overwriting and also requires secure channel ie it requires both Path and Secure attribute.
-
-[More information](https://googlechrome.github.io/samples/cookie-prefixes/) 
-
 #### *No way to revoke JWT token issued untill expiry* ####
 JWT inherent behaviour is there is no way to revoke token before the expiry date so incase a user token is stealed there is not way to invalidate jwt token. so solution can be:
 
@@ -142,8 +122,36 @@ AEAD modes are:
 
 ```approach 1 is recommended approach.```
 
-#### *Storing JWT in local storage/session storage* #### 
-Difference between local storage/session storage and Cookie is cookie cannot be retrieved with Javascript if hardened with Http only flag but local storage and session storage is accessed to javascript causing XSS attacks to exploit it.
+#### *Storing JWT in local storage/session storage or as a Cookie* #### 
+Difference between local storage/session storage and Cookie is cookie cannot be retrieved by Javascript if hardened with Http only flag but local storage and session storage is accessed to javascript causing XSS attacks to exploit it. Plus local storage will remain even if browser is closed and but session storage goes away on closing browser.
+
+so from above discussion you might think that cookie is the best place to store JWT but this is not exactly the case.
+`Best practise is storing JWT in session storage` reason being is cookies are sent to each request causing it vulnerable to XSRF/CSRF even if they are hardened ie Http Only and Secure flags. Counter argument might be but Session storage is vulnerable to XSS which is also very dangerous.
+
+##### Fingerprinting JWT token #####
+so in JWT token a random string is stored and then that random string will be stored in ```hardened cookie``` so even if jwt is stolen user cannot fetch the cookie which contains random string. but if attacker steals the JWT, he/she can read the random string and set the cookie as random string, which can be a attack vector. so solution is storing MAC in JWT token and random string in cookie so that attacker even after stealing the JWT token cannot use it.
+
+``` Note: however JWT token is stored in cookie can be very secure if XSRF/CSRF is properly handled.```
+
+#### *Not storing JWT token or Fingerprint in cookie as Secure, Httponly, SameSite and Cookie Prefix*: ####
+Secure and HttpOnly are the simple flags which need to be set for any cookie. they ensure that cookies are send to the request if send over HTTPS and only available to Http Protocol and not accessible to JavaScript respectively.
+
+##### SameSite: #####
+a way to restrict cross site sending of cookies. there are three modes of SameSite:
+1. *Strict*, meaning say A.com set the cookies with Strict mode of SameSite and then user opened B.com then while navigating from B.com to A.com, will not send the cookie flagged as Strict.
+2. *Lax*, meaning Say A.com set the cookies with Lax mode of SameSite then when user opened B.com and then Get requests which changes the Top URL of browser like ahref or links, browser will send the cookies with lax flag but if top level url doesn't change then it will not send the lax cookie like in case of Ajax calls or Image rendering. Also Lax flagged cookies will not be sent in case of CSRF prone methods like POST/PUT/DELETE
+3. *None*, Send to A.com even while navigating from B.com
+
+Default behavior of browsers had changed from None to Lax.
+
+##### Cookie Prefix: #####
+There are certain cases where a subdomain can read or overwrite the domain cookies ie say a subdomain A.B.com can overwrite B.com cookies. so in case a malicious subdomain or a subdomain having some issues can impact the cookie values.
+
+`__Secure` cookie name prefix is used to allow overwriting of the cookies only if done over secure channel ie secure attribute is required.
+
+`__Host-` cookie name prefix will not allow parent domains cookie overwriting and also requires secure channel ie it requires both Path and Secure attribute.
+
+[More information](https://googlechrome.github.io/samples/cookie-prefixes/) 
 
 #### *BruteForce attack* ####
 
