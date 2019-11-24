@@ -25,7 +25,7 @@ is authentic/trusted. Plus Asymmetric algorithm gives benefits of Non-Repudiatio
 in Symmetric algorithm.
 ```
 there is little tweak to what is explained above as we will not encrypt the entire token but instead encrypt the Hash of the token. 
-### *Why we are encrypting the Hash not the entire token ?* ###
+#### *Why we are encrypting the Hash not the entire token ?* ####
 ```
 1.1. Asymmetric algorithms are slow so if token is large then it can have a performance impact.
 1.2. Encryption algorithms doesn't provide integrity ie to know if something is modified. 
@@ -48,11 +48,14 @@ So HMAC is something like Hash(Key || Hash (Key || Message))
 ```
 
 ### Some of the Attacks against JWT ###
-1. *none hashing algorithm*: none hashing algorithm is used by the JWT in case the 
+#### *none hashing algorithm*: ####
+none hashing algorithm is used by the JWT in case the 
 integrity of token is already verified. so incase an attacked sends none hashing algorithm 
 and signature as empty, it might be an issue. this was a vulnerability in many encryption algorithms.
 ``` so solution is disallowing none hashing algorithm ```
-2. *which verification algorithm RSA or HMAC*: General issue in verification of token is the structure of verification 
+
+#### *which verification algorithm RSA or HMAC*: ####
+General issue in verification of token is the structure of verification 
 method which is 
 ``` verify(string token, string verificationKey) ```
 now say server is expecting to verify the algorithm using RSA and say hacker has signed the token with Public key and set
@@ -68,10 +71,12 @@ so say hacker has encrypted with public key and sends the algorithm as "HS". Als
 
 if we change above case little bit and send "RS" as algorithm and kid of RS then it will not work because of encryption issue due to Asymmetric nature. if kid of HS is provided then key will not match.
 
-##### Add More analysis to below once #####
-3. *Not storing JWT cookie as Secure and Http only.*
-4. *Storing JWT in local storage/session storage* -> Difference between local storage/session storage and Cookie is cookie cannot be retrieved with Javascript if hardened with Http only flag but local storage and session storage is accessed to javascript causing XSS attacks to exploit it.
-5. *BruteForce attack*
+#### *Not storing JWT cookie as Secure and Http only.* ####
+
+#### *Storing JWT in local storage/session storage* #### 
+Difference between local storage/session storage and Cookie is cookie cannot be retrieved with Javascript if hardened with Http only flag but local storage and session storage is accessed to javascript causing XSS attacks to exploit it.
+
+#### *BruteForce attack* ####
 
 
 
