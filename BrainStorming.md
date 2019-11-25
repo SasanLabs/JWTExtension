@@ -154,10 +154,11 @@ There are certain cases where a subdomain can read or overwrite the domain cooki
 [More information](https://googlechrome.github.io/samples/cookie-prefixes/) 
 
 #### *BruteForce attack* ####
+Due to weak secret HMAC based JWT becomes vulnerable to bruteforce attacks and can be cracked using password dictionary attacks. Prevention could be choosing secret as a large strong (containing numeric and alpha numeric characters) string and then trying password dictionary attack with combined JWT to check the strength.
 
+try using HashCat or JohnTheRipper for password dictionary attack.
 
-
-
+[More Information](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html)
 
 
 
