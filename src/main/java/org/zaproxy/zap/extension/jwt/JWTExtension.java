@@ -55,39 +55,50 @@ public class JWTExtension extends ExtensionAdaptor {
     @Override
     public void hook(ExtensionHook extensionHook) {
         super.hook(extensionHook);
-        //initialize props
+        // initialize props
         JWTI18n.init();
         try {
             LOGGER.error("JWT Extension");
-            //jwtMenu is not working for now.
+            // jwtMenu is not working for now.
             ExtensionPopupMenu jwtMenu =
                     new ExtensionPopupMenuMessageContainer(
                             JWTI18n.getMessage("jwt.popup.mainmenu")) {
-            	 private static final long serialVersionUID = 1321249475392775487L;
+                        private static final long serialVersionUID = 1321249475392775487L;
 
-            	 @Override
-            	    public boolean isEnableForComponent(Component invoker) {
-            	        return true;
-            	    }
-            };
+                        @Override
+                        public boolean isEnableForComponent(Component invoker) {
+                            return true;
+                        }
+                    };
             jwtMenu.addActionListener(
                     new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                        	LOGGER.error("JWT Extension Menu item");
+                            LOGGER.error("JWT Extension Menu item");
+                            // read the token and parse it.
+                            // understand it and then perform active scan kind of thing.
+
+                            // Test Case 1. Check cookies used for Storing are httponly and secure.
+                            // Test Case 2.
+                            // https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html
+                            // Try using bruteforce too.
+                            // https://medium.com/@codebyamir/the-java-developers-guide-to-ssl-certificates-b78142b3a0fc
                         }
                     });
             extensionHook.getHookMenu().addPopupMenuItem(jwtMenu);
-            
+
             JMenuItem jwtActiveEditorMenu =
                     new JMenuItem(JWTI18n.getMessage("jwt.toolmenu.settings"));
             jwtActiveEditorMenu.addActionListener(
                     new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                        	LOGGER.error("JWT Settings item");
-                        	//Adding dummy code for JWT here.
-                        	
+                            LOGGER.error("JWT Settings item");
+                            // Adding dummy code for JWT here.
+                            // Input -> Trust Store path (Store that) {hsqldb}
+                            // Or incase implementation of API where ZAP certificate can be trusted
+                            // and used in JWT.
+
                         }
                     });
             extensionHook.getHookMenu().addToolsMenuItem(jwtActiveEditorMenu);
