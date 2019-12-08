@@ -51,70 +51,72 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     public void scan(HttpMessage msg, String param, String value) {
         // Checking JWT endpoint is proper ?
         // Fuzzing JWT endpoint based on the Truststore configuration
-    	int maxClientSideRequestCount = 0;
-    	int maxServerSideRequestCount = 0;
-    	
-    	switch(this.getAttackStrength()) {
-    	case LOW:
-    		maxClientSideRequestCount = 2;
-    		maxServerSideRequestCount = 3;
-    		break;
-    	case MEDIUM:
-    		maxClientSideRequestCount = 4;
-    		maxServerSideRequestCount = 6;
-    		break;
-    	case HIGH:
-    		maxClientSideRequestCount = 5;
-    		maxServerSideRequestCount = 10;
-    		break;
-    	case INSANE:
-    		maxClientSideRequestCount = 6;
-    		maxServerSideRequestCount = 24;
-    		break;
-    	default:
-    		break;
-    	}
-    	
-    	performAttackClientSideConfigurations(msg, param, value, maxClientSideRequestCount);
-    	performAttackServerSideConfigurations(msg, param, value, maxServerSideRequestCount);
-    	try {
+        int maxClientSideRequestCount = 0;
+        int maxServerSideRequestCount = 0;
+
+        switch (this.getAttackStrength()) {
+            case LOW:
+                maxClientSideRequestCount = 2;
+                maxServerSideRequestCount = 3;
+                break;
+            case MEDIUM:
+                maxClientSideRequestCount = 4;
+                maxServerSideRequestCount = 6;
+                break;
+            case HIGH:
+                maxClientSideRequestCount = 5;
+                maxServerSideRequestCount = 10;
+                break;
+            case INSANE:
+                maxClientSideRequestCount = 6;
+                maxServerSideRequestCount = 24;
+                break;
+            default:
+                break;
+        }
+
+        performAttackClientSideConfigurations(msg, param, value, maxClientSideRequestCount);
+        performAttackServerSideConfigurations(msg, param, value, maxServerSideRequestCount);
+        try {
             sendAndReceive(msg);
         } catch (IOException e) {
             LOGGER.error(e);
         }
     }
-    
+
     /**
      * performs attack to find if client side configurations for JWT token are proper.
-     * 
+     *
      * @param msg
      * @param param
      * @param value
      */
-    private void performAttackClientSideConfigurations(HttpMessage msg, String param, String value, int maxRequestCount) {
-    	
-    }
-    
+    private void performAttackClientSideConfigurations(
+            HttpMessage msg, String param, String value, int maxRequestCount) {}
+
     /**
-     * performs attack to checks JWT implementation weaknesses, weak key usages and other types of attacks. 
+     * performs attack to checks JWT implementation weaknesses, weak key usages and other types of
+     * attacks.
+     *
      * @param msg
      * @param param
      * @param value
      */
-    private void performAttackServerSideConfigurations(HttpMessage msg, String param, String value, int maxRequestCount) {
-    	//
-    	this.performBruteForceAttack(msg, param, value, maxRequestCount);
+    private void performAttackServerSideConfigurations(
+            HttpMessage msg, String param, String value, int maxRequestCount) {
+        //
+        this.performBruteForceAttack(msg, param, value, maxRequestCount);
     }
-    
+
     /**
-     * performs attack by brute forcing JWT implementation. 
+     * performs attack by brute forcing JWT implementation.
+     *
      * @param msg
      * @param param
      * @param value
      */
-    private void performBruteForceAttack(HttpMessage msg, String param, String value, int maxRequestCount) {
-    	
-    }
+    private void performBruteForceAttack(
+            HttpMessage msg, String param, String value, int maxRequestCount) {}
 
     @Override
     public int getId() {
