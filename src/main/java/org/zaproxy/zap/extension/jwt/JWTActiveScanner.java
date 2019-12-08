@@ -20,6 +20,7 @@
 package org.zaproxy.zap.extension.jwt;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
@@ -31,8 +32,9 @@ import org.parosproxy.paros.network.HttpMessage;
  *
  * <ol>
  *   <li>https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html
- *   <li>https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/
+ *   <li>https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries
  *   <li>https://github.com/SasanLabs/JWTExtension/blob/master/BrainStorming.md
+ *   <li>https://github.com/ticarpi/jwt_tool/blob/master/jwt_tool.py
  * </ol>
  *
  * @author KSASAN preetkaran20@gmail.com
@@ -46,6 +48,11 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             Constant.messages.getString("ascanrules.jwt.description");
 
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
+
+    private boolean checkIfValueIsJWT(String value) throws UnsupportedEncodingException {
+        JWTUtils.parseJWTToken(value);
+        return false;
+    }
 
     @Override
     public void scan(HttpMessage msg, String param, String value) {
@@ -117,6 +124,8 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      */
     private void performBruteForceAttack(
             HttpMessage msg, String param, String value, int maxRequestCount) {}
+
+    private void performNoneHashingAlgorithmAttack(HttpMessage msg, String param, String value) {}
 
     @Override
     public int getId() {
