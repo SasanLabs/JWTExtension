@@ -31,6 +31,8 @@ public class JWTUtils {
 
     public static final String JWT_TOKEN_PERIOD_CHARACTER = ".";
 
+    public static final String[] NONE_ALGORITHM_VARIANTS = {"none", "None", "NONE", "nOnE"};
+
     public static byte[] getBytes(String token) throws UnsupportedEncodingException {
 
         return token.getBytes(Charset.forName(JWT_TOKEN_ENCODING).name());
@@ -48,6 +50,14 @@ public class JWTUtils {
      * @return
      */
     public static boolean isTokenValid(String jwtToken) {
+        if (Objects.isNull(jwtToken)) {
+            return false;
+        }
+
+        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER);
+        if (Objects.isNull(tokens) || tokens.length < 3) {
+            return false;
+        }
         return true;
     }
 
@@ -57,20 +67,26 @@ public class JWTUtils {
      * @param jwtToken
      * @return JWTTokenBean
      * @throws UnsupportedEncodingException
+     * @throws JWTExtensionValidationException
      */
-    public static JWTTokenBean parseJWTToken(String jwtToken) throws UnsupportedEncodingException {
+    public static JWTTokenBean parseJWTToken(String jwtToken)
+            throws JWTExtensionValidationException {
+        if (!isTokenValid(jwtToken)) {
+            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid");
+        }
         JWTTokenBean jwtTokenBean = new JWTTokenBean();
         String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER);
-        if (Objects.isNull(tokens) || tokens.length < 3) {
-            // Need to throw exception
-        }
 
-        String header = getString(Base64.getUrlDecoder().decode(getBytes(tokens[0])));
-        String payload = getString(Base64.getUrlDecoder().decode(getBytes(tokens[1])));
-        String sign = getString(Base64.getUrlDecoder().decode(getBytes(tokens[2])));
-        jwtTokenBean.setHeader(header);
-        jwtTokenBean.setPayload(payload);
-        jwtTokenBean.setSignature(sign);
+        try {
+            String header = getString(Base64.getUrlDecoder().decode(getBytes(tokens[0])));
+            String payload = getString(Base64.getUrlDecoder().decode(getBytes(tokens[1])));
+            String sign = getString(Base64.getUrlDecoder().decode(getBytes(tokens[2])));
+            jwtTokenBean.setHeader(header);
+            jwtTokenBean.setPayload(payload);
+            jwtTokenBean.setSignature(sign);
+        } catch (UnsupportedEncodingException e) {
+            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid", e);
+        }
         return jwtTokenBean;
     }
 }
