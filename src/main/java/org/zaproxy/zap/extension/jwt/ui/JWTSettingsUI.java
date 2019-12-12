@@ -31,6 +31,7 @@ import javax.swing.JFrame;
  */
 public class JWTSettingsUI extends JFrame {
 
+    // Truststore is helpful for RSA based public key sign and validation for HS vulnerability
     private String trustStorePath;
 
     private static final long serialVersionUID = 1L;
