@@ -20,10 +20,10 @@
 package org.zaproxy.zap.extension.jwt;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
+import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
 
 /**
@@ -49,18 +49,25 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
 
-    private boolean checkIfValueIsJWT(String value) throws UnsupportedEncodingException {
-        JWTUtils.parseJWTToken(value);
-        return false;
-    }
+    private int maxClientSideRequestCount = 0;
+    private int maxServerSideRequestCount = 0;
 
     @Override
     public void scan(HttpMessage msg, String param, String value) {
         // Checking JWT endpoint is proper ?
-        // Fuzzing JWT endpoint based on the Truststore configuration
-        int maxClientSideRequestCount = 0;
-        int maxServerSideRequestCount = 0;
 
+        if (!JWTUtils.isTokenValid(value)) {
+            return;
+        }
+        JWTTokenBean jwtTokenBean;
+        try {
+            jwtTokenBean = JWTUtils.parseJWTToken(value);
+        } catch (JWTExtensionValidationException e1) {
+            // Log exception and return
+            return;
+        }
+
+        // Fuzzing JWT endpoint based on the Truststore configuration
         switch (this.getAttackStrength()) {
             case LOW:
                 maxClientSideRequestCount = 2;
@@ -82,8 +89,8 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
                 break;
         }
 
-        performAttackClientSideConfigurations(msg, param, value, maxClientSideRequestCount);
-        performAttackServerSideConfigurations(msg, param, value, maxServerSideRequestCount);
+        performAttackClientSideConfigurations(msg, param, jwtTokenBean);
+        performAttackServerSideConfigurations(msg, param, jwtTokenBean);
         try {
             sendAndReceive(msg);
         } catch (IOException e) {
@@ -91,15 +98,31 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         }
     }
 
+    protected boolean isStop() {
+        return super.isStop()
+                && (this.maxClientSideRequestCount == 0 || this.maxServerSideRequestCount == 0);
+    }
+
+    private void decreaseServerSideRequestCount() {
+        this.maxServerSideRequestCount--;
+    }
+
+    private void decreaseClientSideRequestCount() {
+        this.maxClientSideRequestCount--;
+    }
+
     /**
      * performs attack to find if client side configurations for JWT token are proper.
      *
      * @param msg
      * @param param
-     * @param value
+     * @param jwtTokenBean
+     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
-    private void performAttackClientSideConfigurations(
-            HttpMessage msg, String param, String value, int maxRequestCount) {}
+    private boolean performAttackClientSideConfigurations(
+            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
+        return false;
+    }
 
     /**
      * performs attack to checks JWT implementation weaknesses, weak key usages and other types of
@@ -107,12 +130,17 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      *
      * @param msg
      * @param param
-     * @param value
+     * @param jwtTokenBean
+     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
-    private void performAttackServerSideConfigurations(
-            HttpMessage msg, String param, String value, int maxRequestCount) {
-        //
-        this.performBruteForceAttack(msg, param, value, maxRequestCount);
+    private boolean performAttackServerSideConfigurations(
+            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
+        boolean result = false;
+        result = this.performNoneHashingAlgorithmAttack(msg, param, jwtTokenBean);
+        if (!result) {
+            result = this.performBruteForceAttack(msg, param, jwtTokenBean);
+        }
+        return result;
     }
 
     /**
@@ -120,12 +148,61 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      *
      * @param msg
      * @param param
-     * @param value
+     * @param jwtTokenBean
+     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
-    private void performBruteForceAttack(
-            HttpMessage msg, String param, String value, int maxRequestCount) {}
+    private boolean performBruteForceAttack(
+            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
+        return false;
+    }
 
-    private void performNoneHashingAlgorithmAttack(HttpMessage msg, String param, String value) {}
+    /**
+     * None Hashing algorithm attack
+     *
+     * @param msg
+     * @param param
+     * @param jwtTokenBean
+     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
+     */
+    private boolean performNoneHashingAlgorithmAttack(
+            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
+        // As we have already have a valid msg so we need to just check if status
+        // remains same that means that attack worked.
+        JWTTokenBean cloneJWTTokenBean = new JWTTokenBean();
+        for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
+            if (this.isStop()) {
+                return false;
+            }
+            this.decreaseServerSideRequestCount();
+            cloneJWTTokenBean.setHeader("{\"typ\":\"JWT\",\"alg\":\"" + noneVariant + "\"}");
+            cloneJWTTokenBean.setSignature("");
+            try {
+                String noneAlgorithmJwtToken = cloneJWTTokenBean.getToken();
+                HttpMessage newMsg = this.getNewMsg();
+                this.setParameter(newMsg, param, noneAlgorithmJwtToken);
+                this.sendAndReceive(newMsg, false);
+                if (newMsg.getResponseHeader().getStatusCode()
+                                == msg.getResponseHeader().getStatusCode()
+                        && newMsg.getResponseBody().equals(msg.getResponseBody())) {
+                    // Now create the alert message
+                    this.bingo(
+                            Alert.RISK_HIGH,
+                            Alert.CONFIDENCE_MEDIUM,
+                            msg.getRequestHeader().getURI().toString(),
+                            param,
+                            noneAlgorithmJwtToken,
+                            null,
+                            // need to add below
+                            null,
+                            msg);
+                    return true;
+                }
+            } catch (IOException e) {
+
+            }
+        }
+        return false;
+    }
 
     @Override
     public int getId() {
