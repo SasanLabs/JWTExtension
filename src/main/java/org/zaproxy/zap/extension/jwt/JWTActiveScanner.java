@@ -204,6 +204,11 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         return false;
     }
 
+    /** @return */
+    private boolean performHMacRSASignatureFuzzing() {
+        return false;
+    }
+
     @Override
     public int getId() {
         return PLUGIN_ID;
