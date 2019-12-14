@@ -38,6 +38,13 @@ public class JWTUtils {
 
     public static final String[] NONE_ALGORITHM_VARIANTS = {"none", "None", "NONE", "nOnE"};
 
+    public static final String[] HEADER_FORMAT_VARIANTS = {
+        "{\"typ\":\"JWT\",\"alg\":\"%s\"}",
+        "{\"alg\":\"%s\",\"typ\":\"JWT\"}",
+        "{\"typ\":\"JWT\"}",
+        "{\"alg\":\"%s\"}",
+    };
+
     public static byte[] getBytes(String token) throws UnsupportedEncodingException {
 
         return token.getBytes(Charset.forName(JWT_TOKEN_ENCODING).name());

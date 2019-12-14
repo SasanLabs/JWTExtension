@@ -38,16 +38,26 @@ public class HeaderFuzzer implements JWTFuzzer {
         List<String> fuzzedTokens = new ArrayList<String>();
         JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(jwtTokenBean);
         for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
-            cloneJWTTokenBean.setHeader("{\"typ\":\"JWT\",\"alg\":\"" + noneVariant + "\"}");
-            cloneJWTTokenBean.setSignature("");
-            try {
-                fuzzedTokens.add(cloneJWTTokenBean.getToken());
-            } catch (UnsupportedEncodingException e) {
-                // TODO handling exceptions is left
-
+            for (String headerVariant : this.manipulatingHeaders(noneVariant)) {
+                cloneJWTTokenBean.setHeader(headerVariant);
+                cloneJWTTokenBean.setSignature("");
+                try {
+                    fuzzedTokens.add(cloneJWTTokenBean.getToken());
+                } catch (UnsupportedEncodingException e) {
+                    // TODO handling exceptions is left
+                }
             }
         }
         return fuzzedTokens;
+    }
+
+    private List<String> manipulatingHeaders(String algo) {
+        List<String> fuzzedHeaders = new ArrayList<>();
+        for (String headerVariant : JWTUtils.HEADER_FORMAT_VARIANTS) {
+            String fuzzedHeader = String.format(headerVariant, algo);
+            fuzzedHeaders.add(fuzzedHeader);
+        }
+        return fuzzedHeaders;
     }
 
     @Override
