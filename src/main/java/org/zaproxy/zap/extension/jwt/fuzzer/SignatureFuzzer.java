@@ -20,7 +20,6 @@
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
 import static org.zaproxy.zap.extension.jwt.JWTUtils.HMAC_256;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.HS256_ALGO_JAVA;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_ALGORITHM_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_RSA_ALGORITHM_IDENTIFIER;
@@ -33,11 +32,10 @@ import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.collections.CollectionUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.JWTUtils;
 
@@ -64,10 +62,11 @@ public class SignatureFuzzer implements JWTFuzzer {
      * @throws NoSuchAlgorithmException
      * @throws InvalidKeyException
      * @throws SignatureException
+     * @throws JWTExtensionValidationException
      */
     private List<String> getAlgoKeyConfusionFuzzedToken(JWTTokenBean jwtTokenBean)
-            throws JSONException, NoSuchAlgorithmException, InvalidKeySpecException, IOException,
-                    InvalidKeyException, SignatureException {
+            throws JWTExtensionValidationException, JSONException, NoSuchAlgorithmException,
+                    InvalidKeySpecException, IOException {
         List<String> fuzzedTokens = new ArrayList<>();
         JSONObject jwtHeaderJSON = new JSONObject(jwtTokenBean.getHeader());
         String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
@@ -80,17 +79,14 @@ public class SignatureFuzzer implements JWTFuzzer {
                                     jwtTokenBean.getPayload());
             byte[] base64EncodedFuzzedHeaderAndPayloadBytes =
                     JWTUtils.getBytes(base64EncodedFuzzedHeaderAndPayload);
-            Mac sha256_HMAC = Mac.getInstance(HS256_ALGO_JAVA);
-            SecretKeySpec secret_key =
-                    new SecretKeySpec(JWTUtils.getRSAPublicKey().getEncoded(), HS256_ALGO_JAVA);
-            sha256_HMAC.init(secret_key);
-            byte[] signature = sha256_HMAC.doFinal(base64EncodedFuzzedHeaderAndPayloadBytes);
-            String base64EncodedSign =
-                    JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(signature);
+            String base64EncodedFuzzedTokenSign =
+                    JWTUtils.getBase64EncodedHMACSignedToken(
+                            base64EncodedFuzzedHeaderAndPayloadBytes,
+                            JWTUtils.getRSAPublicKey().getEncoded());
             fuzzedTokens.add(
                     base64EncodedFuzzedHeaderAndPayload
                             + JWT_TOKEN_PERIOD_CHARACTER
-                            + base64EncodedSign);
+                            + base64EncodedFuzzedTokenSign);
         }
         return fuzzedTokens;
     }
@@ -104,12 +100,11 @@ public class SignatureFuzzer implements JWTFuzzer {
             if (CollectionUtils.isNotEmpty(algoKeyConfusionFuzzedTokens)) {
                 fuzzedTokens.addAll(algoKeyConfusionFuzzedTokens);
             }
-        } catch (InvalidKeyException
-                | NoSuchAlgorithmException
+        } catch (NoSuchAlgorithmException
                 | InvalidKeySpecException
-                | SignatureException
                 | JSONException
-                | IOException e) {
+                | IOException
+                | JWTExtensionValidationException e) {
             // TODO Need to Handle Exception
             e.printStackTrace();
         }

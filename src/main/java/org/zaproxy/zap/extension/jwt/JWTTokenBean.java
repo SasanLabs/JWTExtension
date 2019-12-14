@@ -19,11 +19,9 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
-import static org.zaproxy.zap.extension.jwt.JWTUtils.BASE64_PADDING_CHARACTER_REGEX;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_TOKEN_PERIOD_CHARACTER;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Base64;
 
 /**
  * JWT token is parsed and broken into Header, Payload and Signature.
@@ -81,15 +79,10 @@ public class JWTTokenBean {
      * @throws UnsupportedEncodingException
      */
     public String getToken() throws UnsupportedEncodingException {
-        String base64EncodedHeader =
-                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(header)))
-                        .replaceAll(BASE64_PADDING_CHARACTER_REGEX, "");
-        String base64EncodedPayload =
-                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(payload)))
-                        .replaceAll(BASE64_PADDING_CHARACTER_REGEX, "");
+        String base64EncodedHeader = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(header);
+        String base64EncodedPayload = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(payload);
         String base64EncodedSignature =
-                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(signature)))
-                        .replaceAll(BASE64_PADDING_CHARACTER_REGEX, "");
+                JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(signature);
         return base64EncodedHeader
                 + JWT_TOKEN_PERIOD_CHARACTER
                 + base64EncodedPayload
