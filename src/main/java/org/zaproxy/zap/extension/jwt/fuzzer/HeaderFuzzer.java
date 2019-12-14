@@ -29,20 +29,23 @@ import org.zaproxy.zap.extension.jwt.JWTUtils;
 /** @author preetkaran20@gmail.com KSASAN */
 public class HeaderFuzzer implements JWTFuzzer {
 
-    // TODO add exchanging type and alg in the header.
+    // TODO exchanging algo and type for correct jwt token
+    // TODO adding JKU etc payloads
+    // (https://github.com/andresriancho/jwt-fuzzer/blob/master/jwtfuzzer/fuzzing_functions/header_jku.py)
+    // If JKU holds read if there are any vulnerabilities exists.
+
     /**
      * @param jwtTokenBean
      * @return
      */
     private List<String> getNoneHashingAlgorithmFuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<String>();
-        JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(jwtTokenBean);
         for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
             for (String headerVariant : this.manipulatingHeaders(noneVariant)) {
-                cloneJWTTokenBean.setHeader(headerVariant);
-                cloneJWTTokenBean.setSignature("");
+                jwtTokenBean.setHeader(headerVariant);
+                jwtTokenBean.setSignature("");
                 try {
-                    fuzzedTokens.add(cloneJWTTokenBean.getToken());
+                    fuzzedTokens.add(jwtTokenBean.getToken());
                 } catch (UnsupportedEncodingException e) {
                     // TODO handling exceptions is left
                 }
