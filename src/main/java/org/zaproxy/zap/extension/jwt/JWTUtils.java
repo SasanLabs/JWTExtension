@@ -29,7 +29,12 @@ public class JWTUtils {
 
     public static final String JWT_TOKEN_ENCODING = "UTF-8";
 
-    public static final String JWT_TOKEN_PERIOD_CHARACTER = ".";
+    public static final char JWT_TOKEN_PERIOD_CHARACTER = '.';
+
+    public static final String JWT_TOKEN_PERIOD_CHARACTER_REGEX =
+            "[" + JWT_TOKEN_PERIOD_CHARACTER + "]";
+
+    public static final String BASE64_PADDING_CHARACTER_REGEX = "=";
 
     public static final String[] NONE_ALGORITHM_VARIANTS = {"none", "None", "NONE", "nOnE"};
 
@@ -55,7 +60,7 @@ public class JWTUtils {
             return false;
         }
 
-        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER);
+        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX);
         if (Objects.isNull(tokens) || tokens.length < 3) {
             return false;
         }
@@ -63,7 +68,10 @@ public class JWTUtils {
     }
 
     /**
-     * Parses JWT token and creates JWTTokenBean
+     * Parses JWT token and creates JWTTokenBean we are using base64 Url Safe. because of JWT
+     * specifications <br>
+     * <b> base64 and base64url encoding are different in the last two characters used, ie, base64
+     * -> '+/', or base64url -> '-_' see https://en.wikipedia.org/wiki/Base64#URL_applications </b>
      *
      * @param jwtToken
      * @return JWTTokenBean
@@ -76,7 +84,7 @@ public class JWTUtils {
             throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid");
         }
         JWTTokenBean jwtTokenBean = new JWTTokenBean();
-        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER);
+        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX);
 
         try {
             String header = getString(Base64.getUrlDecoder().decode(getBytes(tokens[0])));
