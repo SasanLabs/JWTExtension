@@ -74,6 +74,8 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     @Override
     public void scan(HttpMessage msg, String param, String value) {
         // Used to populate response to check if fuzzed payload is impacting application.
+        // Removing leading and ending spaces.
+        value = value.trim();
         try {
             sendAndReceive(msg);
         } catch (IOException e) {
