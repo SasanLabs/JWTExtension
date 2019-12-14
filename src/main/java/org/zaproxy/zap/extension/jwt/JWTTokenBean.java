@@ -19,6 +19,7 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
+import static org.zaproxy.zap.extension.jwt.JWTUtils.BASE64_PADDING_CHARACTER_REGEX;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_TOKEN_PERIOD_CHARACTER;
 
 import java.io.UnsupportedEncodingException;
@@ -69,13 +70,26 @@ public class JWTTokenBean {
         this.signature = signature;
     }
 
+    /**
+     * we are using base64 Url Safe. because of JWT specifications <br>
+     * <b> base64 and base64url encoding are different in the last two characters used, ie, base64
+     * -> '+/', or base64url -> '-_' see https://en.wikipedia.org/wiki/Base64#URL_applications </b>
+     * As per <a href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515, Appendix C. Notes on
+     * Implementing base64url Encoding without Padding</a> padding is not there in JWT.
+     *
+     * @return
+     * @throws UnsupportedEncodingException
+     */
     public String getToken() throws UnsupportedEncodingException {
         String base64EncodedHeader =
-                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(header)));
+                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(header)))
+                        .replaceAll(BASE64_PADDING_CHARACTER_REGEX, "");
         String base64EncodedPayload =
-                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(payload)));
+                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(payload)))
+                        .replaceAll(BASE64_PADDING_CHARACTER_REGEX, "");
         String base64EncodedSignature =
-                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(signature)));
+                JWTUtils.getString(Base64.getUrlEncoder().encode(JWTUtils.getBytes(signature)))
+                        .replaceAll(BASE64_PADDING_CHARACTER_REGEX, "");
         return base64EncodedHeader
                 + JWT_TOKEN_PERIOD_CHARACTER
                 + base64EncodedPayload

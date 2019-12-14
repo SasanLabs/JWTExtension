@@ -19,15 +19,33 @@
  */
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
+import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.collections.CollectionUtils;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class SignatureFuzzer implements JWTFuzzer {
 
+    /**
+     * Returns Fuzzed tokens by confusing algo keys.
+     *
+     * @param jwtTokenBean
+     * @return
+     */
+    private List<String> getAlgoKeyConfusionFuzzedTokens(JWTTokenBean jwtTokenBean) {
+        List<String> fuzzedTokens = new ArrayList<>();
+
+        return fuzzedTokens;
+    }
+
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        // TODO Auto-generated method stub
-        return null;
+        List<String> fuzzedTokens = new ArrayList<>();
+        List<String> noneFuzzedTokens = getAlgoKeyConfusionFuzzedTokens(jwtTokenBean);
+        if (CollectionUtils.isNotEmpty(noneFuzzedTokens)) {
+            fuzzedTokens.addAll(noneFuzzedTokens);
+        }
+        return fuzzedTokens;
     }
 }

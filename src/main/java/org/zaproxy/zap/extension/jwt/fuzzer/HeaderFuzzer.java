@@ -34,7 +34,7 @@ public class HeaderFuzzer implements JWTFuzzer {
      * @param jwtTokenBean
      * @return
      */
-    private List<String> getNoneHashingAlgorithmFuzz(JWTTokenBean jwtTokenBean) {
+    private List<String> getNoneHashingAlgorithmFuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<String>();
         JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(jwtTokenBean);
         for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
@@ -53,7 +53,7 @@ public class HeaderFuzzer implements JWTFuzzer {
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<>();
-        List<String> noneFuzzedTokens = getNoneHashingAlgorithmFuzz(jwtTokenBean);
+        List<String> noneFuzzedTokens = getNoneHashingAlgorithmFuzzedTokens(jwtTokenBean);
         if (CollectionUtils.isNotEmpty(noneFuzzedTokens)) {
             fuzzedTokens.addAll(noneFuzzedTokens);
         }

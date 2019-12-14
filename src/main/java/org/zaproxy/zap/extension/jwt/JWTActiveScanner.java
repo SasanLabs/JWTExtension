@@ -73,7 +73,12 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     @Override
     public void scan(HttpMessage msg, String param, String value) {
-        // Checking JWT endpoint is proper ?
+        // Used to populate response to check if fuzzed payload is impacting application.
+        try {
+            sendAndReceive(msg);
+        } catch (IOException e) {
+            LOGGER.error(e);
+        }
 
         if (!JWTUtils.isTokenValid(value)) {
             return;
@@ -110,11 +115,6 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
         performAttackClientSideConfigurations(msg, param, jwtTokenBean);
         performAttackServerSideConfigurations(msg, param, jwtTokenBean);
-        try {
-            sendAndReceive(msg);
-        } catch (IOException e) {
-            LOGGER.error(e);
-        }
     }
 
     protected boolean isStop() {
@@ -170,6 +170,10 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
                 return result;
             }
         }
+
+        // TODO there are scenarios where base64 encoded secrete is used in JWT. more information in
+        // below link
+        // https://stackoverflow.com/questions/58044813/how-to-create-a-jwt-in-java-with-the-secret-base64-encoded
 
         result = this.performBruteForceAttack(msg, param, jwtTokenBean);
         return result;
