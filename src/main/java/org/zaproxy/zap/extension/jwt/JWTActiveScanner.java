@@ -20,6 +20,9 @@
 package org.zaproxy.zap.extension.jwt;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
@@ -35,6 +38,7 @@ import org.parosproxy.paros.network.HttpMessage;
  *   <li>https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries
  *   <li>https://github.com/SasanLabs/JWTExtension/blob/master/BrainStorming.md
  *   <li>https://github.com/ticarpi/jwt_tool/blob/master/jwt_tool.py
+ *   <li>https://github.com/andresriancho/jwt-fuzzer
  * </ol>
  *
  * @author KSASAN preetkaran20@gmail.com
@@ -49,8 +53,13 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
 
+    private JWTConfiguration jwtConfiguration;
     private int maxClientSideRequestCount = 0;
     private int maxServerSideRequestCount = 0;
+
+    public JWTActiveScanner() {
+        jwtConfiguration = JWTConfiguration.getInstance();
+    }
 
     @Override
     public void scan(HttpMessage msg, String param, String value) {
@@ -157,6 +166,39 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     }
 
     /**
+     * @param msg
+     * @param param
+     * @param jwtToken
+     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
+     */
+    private boolean checkIfAttackIsSuccessful(HttpMessage msg, String param, String jwtToken) {
+        HttpMessage newMsg = this.getNewMsg();
+        this.setParameter(newMsg, param, jwtToken);
+        try {
+            this.sendAndReceive(newMsg, false);
+            if (newMsg.getResponseHeader().getStatusCode()
+                            == msg.getResponseHeader().getStatusCode()
+                    && newMsg.getResponseBody().equals(msg.getResponseBody())) {
+                // Now create the alert message
+                this.bingo(
+                        Alert.RISK_HIGH,
+                        Alert.CONFIDENCE_MEDIUM,
+                        msg.getRequestHeader().getURI().toString(),
+                        param,
+                        jwtToken,
+                        null,
+                        // need to add below
+                        null,
+                        msg);
+                return true;
+            }
+        } catch (IOException e) {
+            // TODO adding logger.
+        }
+        return false;
+    }
+
+    /**
      * None Hashing algorithm attack
      *
      * @param msg
@@ -166,8 +208,6 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      */
     private boolean performNoneHashingAlgorithmAttack(
             HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
-        // As we have already have a valid msg so we need to just check if status
-        // remains same that means that attack worked.
         JWTTokenBean cloneJWTTokenBean = new JWTTokenBean();
         for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
             if (this.isStop()) {
@@ -176,29 +216,13 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             this.decreaseServerSideRequestCount();
             cloneJWTTokenBean.setHeader("{\"typ\":\"JWT\",\"alg\":\"" + noneVariant + "\"}");
             cloneJWTTokenBean.setSignature("");
-            try {
-                String noneAlgorithmJwtToken = cloneJWTTokenBean.getToken();
-                HttpMessage newMsg = this.getNewMsg();
-                this.setParameter(newMsg, param, noneAlgorithmJwtToken);
-                this.sendAndReceive(newMsg, false);
-                if (newMsg.getResponseHeader().getStatusCode()
-                                == msg.getResponseHeader().getStatusCode()
-                        && newMsg.getResponseBody().equals(msg.getResponseBody())) {
-                    // Now create the alert message
-                    this.bingo(
-                            Alert.RISK_HIGH,
-                            Alert.CONFIDENCE_MEDIUM,
-                            msg.getRequestHeader().getURI().toString(),
-                            param,
-                            noneAlgorithmJwtToken,
-                            null,
-                            // need to add below
-                            null,
-                            msg);
-                    return true;
-                }
-            } catch (IOException e) {
 
+            String noneAlgorithmJwtToken;
+            try {
+                noneAlgorithmJwtToken = cloneJWTTokenBean.getToken();
+                this.checkIfAttackIsSuccessful(msg, param, noneAlgorithmJwtToken);
+            } catch (UnsupportedEncodingException e) {
+                // TODO adding logger.
             }
         }
         return false;
@@ -206,6 +230,15 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     /** @return */
     private boolean performHMacRSASignatureFuzzing() {
+        String publicKeyPath = jwtConfiguration.getPublicKeyPath();
+        byte[] publicKeyBytes;
+        try {
+            publicKeyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
+        } catch (IOException e) {
+
+            return false;
+        }
+
         return false;
     }
 
