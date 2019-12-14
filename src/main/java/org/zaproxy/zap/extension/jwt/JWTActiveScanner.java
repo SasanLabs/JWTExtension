@@ -20,14 +20,20 @@
 package org.zaproxy.zap.extension.jwt;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
+import org.zaproxy.zap.extension.jwt.fuzzer.HeaderFuzzer;
+import org.zaproxy.zap.extension.jwt.fuzzer.JWTFuzzer;
+import org.zaproxy.zap.extension.jwt.fuzzer.PayloadFuzzer;
+import org.zaproxy.zap.extension.jwt.fuzzer.SignatureFuzzer;
 
 /**
  * JWT plugin used to find the vulnerabilities in JWT implementations. Resources containing more
@@ -56,9 +62,13 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     private JWTConfiguration jwtConfiguration;
     private int maxClientSideRequestCount = 0;
     private int maxServerSideRequestCount = 0;
+    List<JWTFuzzer> fuzzers = new ArrayList<JWTFuzzer>();
 
     public JWTActiveScanner() {
         jwtConfiguration = JWTConfiguration.getInstance();
+        fuzzers.add(new HeaderFuzzer());
+        fuzzers.add(new PayloadFuzzer());
+        fuzzers.add(new SignatureFuzzer());
     }
 
     @Override
@@ -145,10 +155,23 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     private boolean performAttackServerSideConfigurations(
             HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
         boolean result = false;
-        result = this.performNoneHashingAlgorithmAttack(msg, param, jwtTokenBean);
-        if (!result) {
-            result = this.performBruteForceAttack(msg, param, jwtTokenBean);
+
+        List<String> jwtFuzzedTokens = new ArrayList<String>();
+        for (JWTFuzzer jwtFuzzer : fuzzers) {
+            List<String> tokens = jwtFuzzer.fuzzedTokens(jwtTokenBean);
+            if (CollectionUtils.isNotEmpty(tokens)) {
+                jwtFuzzedTokens.addAll(tokens);
+            }
         }
+
+        for (String jwtFuzzedToken : jwtFuzzedTokens) {
+            result = this.checkIfAttackIsSuccessful(msg, param, jwtFuzzedToken);
+            if (result) {
+                return result;
+            }
+        }
+
+        result = this.performBruteForceAttack(msg, param, jwtTokenBean);
         return result;
     }
 
@@ -194,36 +217,6 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             }
         } catch (IOException e) {
             // TODO adding logger.
-        }
-        return false;
-    }
-
-    /**
-     * None Hashing algorithm attack
-     *
-     * @param msg
-     * @param param
-     * @param jwtTokenBean
-     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
-     */
-    private boolean performNoneHashingAlgorithmAttack(
-            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
-        JWTTokenBean cloneJWTTokenBean = new JWTTokenBean();
-        for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
-            if (this.isStop()) {
-                return false;
-            }
-            this.decreaseServerSideRequestCount();
-            cloneJWTTokenBean.setHeader("{\"typ\":\"JWT\",\"alg\":\"" + noneVariant + "\"}");
-            cloneJWTTokenBean.setSignature("");
-
-            String noneAlgorithmJwtToken;
-            try {
-                noneAlgorithmJwtToken = cloneJWTTokenBean.getToken();
-                this.checkIfAttackIsSuccessful(msg, param, noneAlgorithmJwtToken);
-            } catch (UnsupportedEncodingException e) {
-                // TODO adding logger.
-            }
         }
         return false;
     }
