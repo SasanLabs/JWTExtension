@@ -37,6 +37,14 @@ public class JWTTokenBean {
 
     private String signature;
 
+    public JWTTokenBean() {}
+
+    public JWTTokenBean(JWTTokenBean jwtTokenBean) {
+        this.header = jwtTokenBean.getHeader();
+        this.payload = jwtTokenBean.getPayload();
+        this.signature = jwtTokenBean.getSignature();
+    }
+
     public String getHeader() {
         return header;
     }
