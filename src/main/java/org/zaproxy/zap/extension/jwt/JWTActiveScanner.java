@@ -20,8 +20,6 @@
 package org.zaproxy.zap.extension.jwt;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.collections.CollectionUtils;
@@ -160,7 +158,8 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
         List<String> jwtFuzzedTokens = new ArrayList<String>();
         for (JWTFuzzer jwtFuzzer : fuzzers) {
-            List<String> tokens = jwtFuzzer.fuzzedTokens(jwtTokenBean);
+            // Clone is passed so fuzzers can modify passed TokenBean
+            List<String> tokens = jwtFuzzer.fuzzedTokens(new JWTTokenBean(jwtTokenBean));
             if (CollectionUtils.isNotEmpty(tokens)) {
                 jwtFuzzedTokens.addAll(tokens);
             }
@@ -224,20 +223,6 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         } catch (IOException e) {
             // TODO adding logger.
         }
-        return false;
-    }
-
-    /** @return */
-    private boolean performHMacRSASignatureFuzzing() {
-        String publicKeyPath = jwtConfiguration.getPublicKeyPath();
-        byte[] publicKeyBytes;
-        try {
-            publicKeyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
-        } catch (IOException e) {
-
-            return false;
-        }
-
         return false;
     }
 
