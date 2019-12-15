@@ -19,8 +19,6 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
-import static org.zaproxy.zap.extension.jwt.JWTUtils.HS256_ALGO_JAVA;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
@@ -69,6 +67,8 @@ public class JWTUtils {
     public static final String HMAC_256 = "HS256";
 
     public static final String HS256_ALGO_JAVA = "HmacSHA256";
+
+    public static final String NULL_BYTE_CHARACTER = String.valueOf((char) 0);
 
     public static byte[] getBytes(String token) throws UnsupportedEncodingException {
         return token.getBytes(Charset.forName(JWT_TOKEN_ENCODING).name());

@@ -24,17 +24,20 @@ import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_ALGORITHM_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_RSA_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_TOKEN_PERIOD_CHARACTER;
+import static org.zaproxy.zap.extension.jwt.JWTUtils.NULL_BYTE_CHARACTER;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.collections.CollectionUtils;
+import java.util.Objects;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.parosproxy.paros.Constant;
 import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.JWTUtils;
@@ -43,7 +46,22 @@ import org.zaproxy.zap.extension.jwt.JWTUtils;
 public class SignatureFuzzer implements JWTFuzzer {
 
     /**
-     * Returns Fuzzed tokens by confusing algo keys.
+     * Adds Null Byte to the signature to check if JWT is vulnerable to Null Byte injection
+     *
+     * @param jwtTokenBean
+     * @return Null Byte fuzzed token
+     * @throws UnsupportedEncodingException
+     */
+    private String getNullByteFuzzedToken(JWTTokenBean jwtTokenBean)
+            throws UnsupportedEncodingException {
+        JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(jwtTokenBean);
+        cloneJWTTokenBean.setSignature(
+                cloneJWTTokenBean.getSignature() + NULL_BYTE_CHARACTER + Constant.getEyeCatcher());
+        return cloneJWTTokenBean.getToken();
+    }
+
+    /**
+     * Returns Fuzzed token by confusing algo keys.
      *
      * <p>Background about the attack:<br>
      * Say an application is using RSA to sign JWT now what will be the verification method {@code
@@ -64,10 +82,10 @@ public class SignatureFuzzer implements JWTFuzzer {
      * @throws SignatureException
      * @throws JWTExtensionValidationException
      */
-    private List<String> getAlgoKeyConfusionFuzzedToken(JWTTokenBean jwtTokenBean)
+    private String getAlgoKeyConfusionFuzzedToken(JWTTokenBean jwtTokenBean)
             throws JWTExtensionValidationException, JSONException, NoSuchAlgorithmException,
                     InvalidKeySpecException, IOException {
-        List<String> fuzzedTokens = new ArrayList<>();
+        String fuzzedToken = null;
         JSONObject jwtHeaderJSON = new JSONObject(jwtTokenBean.getHeader());
         String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
         if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
@@ -83,23 +101,24 @@ public class SignatureFuzzer implements JWTFuzzer {
                     JWTUtils.getBase64EncodedHMACSignedToken(
                             base64EncodedFuzzedHeaderAndPayloadBytes,
                             JWTUtils.getRSAPublicKey().getEncoded());
-            fuzzedTokens.add(
+            fuzzedToken =
                     base64EncodedFuzzedHeaderAndPayload
                             + JWT_TOKEN_PERIOD_CHARACTER
-                            + base64EncodedFuzzedTokenSign);
+                            + base64EncodedFuzzedTokenSign;
         }
-        return fuzzedTokens;
+        return fuzzedToken;
     }
 
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<>();
-        List<String> algoKeyConfusionFuzzedTokens;
         try {
-            algoKeyConfusionFuzzedTokens = getAlgoKeyConfusionFuzzedToken(jwtTokenBean);
-            if (CollectionUtils.isNotEmpty(algoKeyConfusionFuzzedTokens)) {
-                fuzzedTokens.addAll(algoKeyConfusionFuzzedTokens);
+            String confusionFuzzedToken = getAlgoKeyConfusionFuzzedToken(jwtTokenBean);
+            if (Objects.nonNull(confusionFuzzedToken)) {
+                fuzzedTokens.add(confusionFuzzedToken);
             }
+            fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
+
         } catch (NoSuchAlgorithmException
                 | InvalidKeySpecException
                 | JSONException
