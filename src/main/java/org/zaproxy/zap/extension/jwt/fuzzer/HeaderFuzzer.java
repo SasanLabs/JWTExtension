@@ -35,6 +35,21 @@ public class HeaderFuzzer implements JWTFuzzer {
     // If JKU holds read if there are any vulnerabilities exists.
 
     /**
+     * Kid field is used to identify Algorithm and Key for JWT. Kid field protects against the
+     * {@code SignatureFuzzer#getAlgoKeyConfusionFuzzedToken} payload.
+     *
+     * <p>this fuzzed tokens are used to check vulnerabilities in kid implementation.
+     *
+     * @param jwtTokenBean
+     * @return
+     */
+    private List<String> getKidManipulatedFuzzedToken(JWTTokenBean jwtTokenBean) {
+        List<String> fuzzedTokens = new ArrayList<String>();
+
+        return fuzzedTokens;
+    }
+
+    /**
      * @param jwtTokenBean
      * @return
      */

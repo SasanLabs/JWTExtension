@@ -57,13 +57,11 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
 
-    private JWTConfiguration jwtConfiguration;
     private int maxClientSideRequestCount = 0;
     private int maxServerSideRequestCount = 0;
     List<JWTFuzzer> fuzzers = new ArrayList<JWTFuzzer>();
 
     public JWTActiveScanner() {
-        jwtConfiguration = JWTConfiguration.getInstance();
         fuzzers.add(new HeaderFuzzer());
         fuzzers.add(new PayloadFuzzer());
         fuzzers.add(new SignatureFuzzer());
