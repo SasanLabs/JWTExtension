@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
@@ -51,9 +50,8 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     private static final int PLUGIN_ID = 1001;
 
-    private static final String NAME = Constant.messages.getString("ascanrules.jwt.name");
-    private static final String DESCRIPTION =
-            Constant.messages.getString("ascanrules.jwt.description");
+    private static final String NAME = JWTI18n.getMessage("ascanrules.jwt.name");
+    private static final String DESCRIPTION = JWTI18n.getMessage("ascanrules.jwt.description");
 
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
 
@@ -71,21 +69,23 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     public void scan(HttpMessage msg, String param, String value) {
         // Used to populate response to check if fuzzed payload is impacting application.
         // Removing leading and ending spaces.
-        value = value.trim();
+        String newValue = value.trim();
+        newValue = JWTUtils.extractingJWTFromParamValue(newValue);
         try {
             sendAndReceive(msg);
         } catch (IOException e) {
             LOGGER.error(e);
         }
 
-        if (!JWTUtils.isTokenValid(value)) {
+        if (!JWTUtils.isTokenValid(newValue)) {
             return;
         }
         JWTTokenBean jwtTokenBean;
         try {
-            jwtTokenBean = JWTUtils.parseJWTToken(value);
-        } catch (JWTExtensionValidationException e1) {
+            jwtTokenBean = JWTUtils.parseJWTToken(newValue);
+        } catch (JWTExtensionValidationException e) {
             // Log exception and return
+            LOGGER.error("Unable to parse JWT Token", e);
             return;
         }
 
@@ -111,8 +111,12 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
                 break;
         }
 
-        performAttackClientSideConfigurations(msg, param, jwtTokenBean);
-        performAttackServerSideConfigurations(msg, param, jwtTokenBean);
+        performAttackClientSideConfigurations(msg, param, jwtTokenBean, value);
+        // add https://nvd.nist.gov/vuln/detail/CVE-2018-0114 for Jose library issues
+        // Read vulnerabilires in https://connect2id.com/blog/nimbus-jose-jwt-7-9 and then try to
+        // exploit
+        // vulnerability
+        performAttackServerSideConfigurations(msg, param, jwtTokenBean, value);
     }
 
     protected boolean isStop() {
@@ -137,7 +141,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
     private boolean performAttackClientSideConfigurations(
-            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
+            HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
         return false;
     }
 
@@ -151,7 +155,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
     private boolean performAttackServerSideConfigurations(
-            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
+            HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
         boolean result = false;
 
         List<String> jwtFuzzedTokens = new ArrayList<String>();
@@ -164,7 +168,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         }
 
         for (String jwtFuzzedToken : jwtFuzzedTokens) {
-            result = this.checkIfAttackIsSuccessful(msg, param, jwtFuzzedToken);
+            result = this.checkIfAttackIsSuccessful(msg, param, jwtFuzzedToken, value);
             if (result) {
                 return result;
             }
@@ -174,7 +178,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         // below link
         // https://stackoverflow.com/questions/58044813/how-to-create-a-jwt-in-java-with-the-secret-base64-encoded
 
-        result = this.performBruteForceAttack(msg, param, jwtTokenBean);
+        result = this.performBruteForceAttack(msg, param, jwtTokenBean, value);
         return result;
     }
 
@@ -187,7 +191,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
     private boolean performBruteForceAttack(
-            HttpMessage msg, String param, JWTTokenBean jwtTokenBean) {
+            HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
         return false;
     }
 
@@ -197,9 +201,10 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      * @param jwtToken
      * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
-    private boolean checkIfAttackIsSuccessful(HttpMessage msg, String param, String jwtToken) {
+    private boolean checkIfAttackIsSuccessful(
+            HttpMessage msg, String param, String jwtToken, String value) {
         HttpMessage newMsg = this.getNewMsg();
-        this.setParameter(newMsg, param, jwtToken);
+        this.setParameter(newMsg, param, JWTUtils.addingJWTToParamValue(value, jwtToken));
         try {
             this.sendAndReceive(newMsg, false);
             if (newMsg.getResponseHeader().getStatusCode()

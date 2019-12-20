@@ -125,7 +125,7 @@ public class JWTUtils {
         }
 
         String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX);
-        if (Objects.isNull(tokens) || tokens.length < 3) {
+        if (Objects.isNull(tokens) || tokens.length != 3) {
             return false;
         }
         return true;
@@ -158,6 +158,8 @@ public class JWTUtils {
             jwtTokenBean.setPayload(payload);
             jwtTokenBean.setSignature(sign);
         } catch (UnsupportedEncodingException e) {
+            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid", e);
+        } catch (IllegalArgumentException e) {
             throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid", e);
         }
         return jwtTokenBean;
@@ -193,5 +195,19 @@ public class JWTUtils {
             throw new JWTExtensionValidationException(
                     "Exception occurred while Signing token: " + getString(token), e);
         }
+    }
+
+    public static String extractingJWTFromParamValue(String value) {
+        if (value.contains("Bearer")) {
+            value = value.replace("Bearer", "").trim();
+        }
+        return value;
+    }
+
+    public static String addingJWTToParamValue(String value, String jwtToken) {
+        if (value.contains("Bearer")) {
+            jwtToken = "Bearer " + jwtToken;
+        }
+        return jwtToken;
     }
 }

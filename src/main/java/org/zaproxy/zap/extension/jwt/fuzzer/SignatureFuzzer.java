@@ -34,7 +34,6 @@ import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
@@ -112,21 +111,21 @@ public class SignatureFuzzer implements JWTFuzzer {
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<>();
-        try {
-            String confusionFuzzedToken = getAlgoKeyConfusionFuzzedToken(jwtTokenBean);
-            if (Objects.nonNull(confusionFuzzedToken)) {
-                fuzzedTokens.add(confusionFuzzedToken);
-            }
-            fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
-
-        } catch (NoSuchAlgorithmException
-                | InvalidKeySpecException
-                | JSONException
-                | IOException
-                | JWTExtensionValidationException e) {
-            // TODO Need to Handle Exception
-            e.printStackTrace();
-        }
+        //        try {
+        //            String confusionFuzzedToken = getAlgoKeyConfusionFuzzedToken(jwtTokenBean);
+        //            if (Objects.nonNull(confusionFuzzedToken)) {
+        //                fuzzedTokens.add(confusionFuzzedToken);
+        //            }
+        //            fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
+        //
+        //        } catch (NoSuchAlgorithmException
+        //                | InvalidKeySpecException
+        //                | JSONException
+        //                | IOException
+        //                | JWTExtensionValidationException e) {
+        //            // TODO Need to Handle Exception
+        //            e.printStackTrace();
+        //        }
         return fuzzedTokens;
     }
 }
