@@ -49,15 +49,12 @@ import org.zaproxy.zap.extension.jwt.fuzzer.SignatureFuzzer;
 public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     private static final int PLUGIN_ID = 1001;
-
     private static final String NAME = JWTI18n.getMessage("ascanrules.jwt.name");
     private static final String DESCRIPTION = JWTI18n.getMessage("ascanrules.jwt.description");
-
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
-
     private int maxClientSideRequestCount = 0;
     private int maxServerSideRequestCount = 0;
-    List<JWTFuzzer> fuzzers = new ArrayList<JWTFuzzer>();
+    private List<JWTFuzzer> fuzzers = new ArrayList<JWTFuzzer>();
 
     public JWTActiveScanner() {
         fuzzers.add(new HeaderFuzzer());
@@ -67,29 +64,30 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     @Override
     public void scan(HttpMessage msg, String param, String value) {
-        // Used to populate response to check if fuzzed payload is impacting application.
-        // Removing leading and ending spaces.
         String newValue = value.trim();
         newValue = JWTUtils.extractingJWTFromParamValue(newValue);
+
+        // Sending a request to compare fuzzed response and actual response
         try {
             sendAndReceive(msg);
         } catch (IOException e) {
             LOGGER.error(e);
+            return;
         }
 
         if (!JWTUtils.isTokenValid(newValue)) {
+            LOGGER.error("Token: " + value + " is not a value JWT token.");
             return;
         }
+
         JWTTokenBean jwtTokenBean;
         try {
             jwtTokenBean = JWTUtils.parseJWTToken(newValue);
         } catch (JWTExtensionValidationException e) {
-            // Log exception and return
             LOGGER.error("Unable to parse JWT Token", e);
             return;
         }
 
-        // Fuzzing JWT endpoint based on the Truststore configuration
         switch (this.getAttackStrength()) {
             case LOW:
                 maxClientSideRequestCount = 2;
@@ -113,7 +111,8 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
         performAttackClientSideConfigurations(msg, param, jwtTokenBean, value);
         // add https://nvd.nist.gov/vuln/detail/CVE-2018-0114 for Jose library issues
-        // Read vulnerabilires in https://connect2id.com/blog/nimbus-jose-jwt-7-9 and then try to
+        // Read vulnerabilires in https://connect2id.com/blog/nimbus-jose-jwt-7-9 and
+        // then try to
         // exploit
         // vulnerability
         performAttackServerSideConfigurations(msg, param, jwtTokenBean, value);
@@ -174,7 +173,8 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             }
         }
 
-        // TODO there are scenarios where base64 encoded secrete is used in JWT. more information in
+        // TODO there are scenarios where base64 encoded secrete is used in JWT. more
+        // information in
         // below link
         // https://stackoverflow.com/questions/58044813/how-to-create-a-jwt-in-java-with-the-secret-base64-encoded
 
@@ -246,19 +246,16 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     @Override
     public int getCategory() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     @Override
     public String getSolution() {
-        // TODO Auto-generated method stub
         return null;
     }
 
     @Override
     public String getReference() {
-        // TODO Auto-generated method stub
         return null;
     }
 }

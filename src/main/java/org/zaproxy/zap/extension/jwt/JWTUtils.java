@@ -32,6 +32,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -45,6 +46,14 @@ public class JWTUtils {
     public static final String JWT_TOKEN_PERIOD_CHARACTER_REGEX =
             "[" + JWT_TOKEN_PERIOD_CHARACTER + "]";
 
+    public static final Pattern JWT_TOKEN_REGEX_PATTERN =
+            Pattern.compile(
+                    "[a-zA-Z0-9_-]*"
+                            + JWT_TOKEN_PERIOD_CHARACTER_REGEX
+                            + "[a-zA-Z0-9_-]*"
+                            + JWT_TOKEN_PERIOD_CHARACTER_REGEX
+                            + "[a-zA-Z0-9_-]*$");
+
     public static final String BASE64_PADDING_CHARACTER_REGEX = "=";
 
     public static final String[] NONE_ALGORITHM_VARIANTS = {"none", "None", "NONE", "nOnE"};
@@ -52,6 +61,10 @@ public class JWTUtils {
     public static final String JWT_ALGORITHM_KEY_HEADER = "alg";
 
     public static final String JWT_RSA_ALGORITHM_IDENTIFIER = "RS";
+
+    public static final String JWT_EXP_ALGORITHM_IDENTIFIER = "exp";
+
+    public static final String JSON_WEB_KEY_HEADER = "jwk";
 
     public static final String JWT_HEADER_WITH_ALGO_PLACEHOLDER =
             "{\"typ\":\"JWT\",\"alg\":\"%s\"}";
@@ -69,6 +82,8 @@ public class JWTUtils {
     public static final String HS256_ALGO_JAVA = "HmacSHA256";
 
     public static final String NULL_BYTE_CHARACTER = String.valueOf((char) 0);
+
+    public static final String BEARER_TOKEN_REGEX = "(?i)bearer";
 
     public static byte[] getBytes(String token) throws UnsupportedEncodingException {
         return token.getBytes(Charset.forName(JWT_TOKEN_ENCODING).name());
@@ -123,12 +138,7 @@ public class JWTUtils {
         if (Objects.isNull(jwtToken)) {
             return false;
         }
-
-        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX);
-        if (Objects.isNull(tokens) || tokens.length != 3) {
-            return false;
-        }
-        return true;
+        return JWT_TOKEN_REGEX_PATTERN.matcher(jwtToken).matches();
     }
 
     /**
@@ -197,15 +207,19 @@ public class JWTUtils {
         }
     }
 
+    private static boolean hasBearerToken(String value) {
+        return Pattern.compile(BEARER_TOKEN_REGEX).matcher(value).find();
+    }
+
     public static String extractingJWTFromParamValue(String value) {
-        if (value.contains("Bearer")) {
-            value = value.replace("Bearer", "").trim();
+        if (hasBearerToken(value)) {
+            value = value.replaceAll(BEARER_TOKEN_REGEX, "").trim();
         }
         return value;
     }
 
     public static String addingJWTToParamValue(String value, String jwtToken) {
-        if (value.contains("Bearer")) {
+        if (hasBearerToken(value)) {
             jwtToken = "Bearer " + jwtToken;
         }
         return jwtToken;
