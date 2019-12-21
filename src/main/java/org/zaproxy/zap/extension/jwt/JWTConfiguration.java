@@ -23,6 +23,12 @@ package org.zaproxy.zap.extension.jwt;
  * This class holds UI configuration and used by JWT Active Scanner for performing JWT based
  * attacks.
  *
+ * TODO my thinking now configurations needed are
+ * 1. for JWK based on URL
+ * 2. for Public Key/Private Key path for fuzzing signature if required
+ * 3. HMAC secret key for fuzzing signature if required
+ * 4. only public key path for mixed algorithm vulnerability
+ *
  * @author preetkaran20@gmail.com KSASAN
  */
 public class JWTConfiguration {
