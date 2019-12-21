@@ -20,20 +20,33 @@
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
 import static org.zaproxy.zap.extension.jwt.JWTUtils.HMAC_256;
+import static org.zaproxy.zap.extension.jwt.JWTUtils.JSON_WEB_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_ALGORITHM_KEY_HEADER;
+import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_EXP_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_RSA_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_TOKEN_PERIOD_CHARACTER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.NULL_BYTE_CHARACTER;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
@@ -43,6 +56,8 @@ import org.zaproxy.zap.extension.jwt.JWTUtils;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class SignatureFuzzer implements JWTFuzzer {
+
+    private static final Logger LOGGER = Logger.getLogger(SignatureFuzzer.class);
 
     /**
      * Adds Null Byte to the signature to check if JWT is vulnerable to Null Byte injection
@@ -57,6 +72,44 @@ public class SignatureFuzzer implements JWTFuzzer {
         cloneJWTTokenBean.setSignature(
                 cloneJWTTokenBean.getSignature() + NULL_BYTE_CHARACTER + Constant.getEyeCatcher());
         return cloneJWTTokenBean.getToken();
+    }
+
+    /**
+     * Payload is as per the https://nvd.nist.gov/vuln/detail/CVE-2018-0114 vulnerability
+     *
+     * @param jwtTokenBean
+     * @throws NoSuchAlgorithmException
+     * @throws JOSEException
+     * @throws ParseException
+     */
+    private void populateTokenSignedWithCustomPrivateKey(
+            JWTTokenBean jwtTokenBean, List<String> fuzzedToken)
+            throws NoSuchAlgorithmException, JOSEException, ParseException {
+        JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
+        JSONObject payloadJSONObject = new JSONObject(jwtTokenBean.getPayload());
+        String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
+        if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
+            long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
+            expiryTimeInMillis = expiryTimeInMillis + 2000;
+            payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
+
+            // Generating JWK
+            RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
+            rsaKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
+            RSAKey rsaKey = rsaKeyGenerator.generate();
+            headerJSONObject.put(JSON_WEB_KEY_HEADER, rsaKey.toJSONObject());
+
+            // Getting base64 encoded signed token
+            JWTTokenBean newJWTokenBean = new JWTTokenBean();
+            newJWTokenBean.setPayload(payloadJSONObject.toString());
+            JWSSigner signer = new RSASSASigner(rsaKey);
+            SignedJWT signedJWT =
+                    new SignedJWT(
+                            JWSHeader.parse(headerJSONObject.toString()),
+                            JWTClaimsSet.parse(payloadJSONObject.toString()));
+            signedJWT.sign(signer);
+            fuzzedToken.add(signedJWT.serialize());
+        }
     }
 
     /**
@@ -81,6 +134,8 @@ public class SignatureFuzzer implements JWTFuzzer {
      * @throws SignatureException
      * @throws JWTExtensionValidationException
      */
+    @Deprecated
+    // Not used need to design using nimbus jose
     private String getAlgoKeyConfusionFuzzedToken(JWTTokenBean jwtTokenBean)
             throws JWTExtensionValidationException, JSONException, NoSuchAlgorithmException,
                     InvalidKeySpecException, IOException {
@@ -111,21 +166,22 @@ public class SignatureFuzzer implements JWTFuzzer {
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<>();
-        //        try {
-        //            String confusionFuzzedToken = getAlgoKeyConfusionFuzzedToken(jwtTokenBean);
-        //            if (Objects.nonNull(confusionFuzzedToken)) {
-        //                fuzzedTokens.add(confusionFuzzedToken);
-        //            }
-        //            fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
-        //
-        //        } catch (NoSuchAlgorithmException
-        //                | InvalidKeySpecException
-        //                | JSONException
-        //                | IOException
-        //                | JWTExtensionValidationException e) {
-        //            // TODO Need to Handle Exception
-        //            e.printStackTrace();
-        //        }
+
+        try {
+            populateTokenSignedWithCustomPrivateKey(jwtTokenBean, fuzzedTokens);
+            // String confusionFuzzedToken = getAlgoKeyConfusionFuzzedToken(jwtTokenBean);
+            // if (Objects.nonNull(confusionFuzzedToken)) {
+            // fuzzedTokens.add(confusionFuzzedToken);
+            // }
+            fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
+
+        } catch (NoSuchAlgorithmException
+                | JSONException
+                | IOException
+                | JOSEException
+                | ParseException e) {
+            LOGGER.error("error occurred while getting signed fuzzed tokens", e);
+        }
         return fuzzedTokens;
     }
 }
