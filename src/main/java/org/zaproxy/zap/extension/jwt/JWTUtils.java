@@ -62,6 +62,8 @@ public class JWTUtils {
 
     public static final String JWT_RSA_ALGORITHM_IDENTIFIER = "RS";
 
+    public static final String JWT_HMAC_ALGORITHM_IDENTIFIER = "RS";
+
     public static final String JWT_EXP_ALGORITHM_IDENTIFIER = "exp";
 
     public static final String JSON_WEB_KEY_HEADER = "jwk";
