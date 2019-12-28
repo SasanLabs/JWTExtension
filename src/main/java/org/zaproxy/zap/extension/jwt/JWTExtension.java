@@ -30,6 +30,7 @@ import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.zaproxy.zap.extension.ExtensionPopupMenu;
+import org.zaproxy.zap.extension.jwt.ui.JWTSettingsUI;
 import org.zaproxy.zap.view.popup.ExtensionPopupMenuMessageContainer;
 
 /** @author KSASAN preetkaran20@gmail.com */
@@ -93,12 +94,9 @@ public class JWTExtension extends ExtensionAdaptor {
                     new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
-                            LOGGER.error("JWT Settings item");
-                            // Adding dummy code for JWT here.
-                            // Input -> Trust Store path (Store that) {hsqldb}
-                            // Or incase implementation of API where ZAP certificate can be trusted
-                            // and used in JWT.
-
+                            LOGGER.info("JWT Settings item");
+                            JWTSettingsUI jwtSettingsUI = new JWTSettingsUI();
+                            jwtSettingsUI.setVisible(true);
                         }
                     });
             extensionHook.getHookMenu().addToolsMenuItem(jwtActiveEditorMenu);
