@@ -29,6 +29,7 @@ import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.zap.extension.jwt.fuzzer.HeaderFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.JWTFuzzer;
+import org.zaproxy.zap.extension.jwt.fuzzer.MiscFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.PayloadFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.SignatureFuzzer;
 
@@ -37,11 +38,15 @@ import org.zaproxy.zap.extension.jwt.fuzzer.SignatureFuzzer;
  * information about vulnerable implementations are: <br>
  *
  * <ol>
- *   <li>https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html
- *   <li>https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries
- *   <li>https://github.com/SasanLabs/JWTExtension/blob/master/BrainStorming.md
- *   <li>https://github.com/ticarpi/jwt_tool/blob/master/jwt_tool.py
- *   <li>https://github.com/andresriancho/jwt-fuzzer
+ *   <li>https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html ->
+ *       For in-depth analysis about vulnerabilities in JWT implementation
+ *   <li>https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries -> For server
+ *       side vulnerabilties in JWT implementations
+ *   <li>https://github.com/SasanLabs/JWTExtension/blob/master/BrainStorming.md -> General
+ *       understanding
+ *   <li>https://github.com/ticarpi/jwt_tool/blob/master/jwt_tool.py -> Fuzzer Logic
+ *   <li>https://github.com/andresriancho/jwt-fuzzer -> Fuzzer Logic
+ *   <li>https://github.com/brendan-rius/c-jwt-cracker -> About the BruteForce Attack
  * </ol>
  *
  * @author KSASAN preetkaran20@gmail.com
@@ -60,6 +65,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         fuzzers.add(new HeaderFuzzer());
         fuzzers.add(new PayloadFuzzer());
         fuzzers.add(new SignatureFuzzer());
+        fuzzers.add(new MiscFuzzer());
     }
 
     @Override
@@ -67,16 +73,15 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         String newValue = value.trim();
         newValue = JWTUtils.extractingJWTFromParamValue(newValue);
 
+        if (!JWTUtils.isTokenValid(newValue)) {
+            LOGGER.error("Token: " + value + " is not a valid JWT token.");
+            return;
+        }
         // Sending a request to compare fuzzed response and actual response
         try {
             sendAndReceive(msg);
         } catch (IOException e) {
             LOGGER.error(e);
-            return;
-        }
-
-        if (!JWTUtils.isTokenValid(newValue)) {
-            LOGGER.error("Token: " + value + " is not a value JWT token.");
             return;
         }
 
@@ -167,8 +172,10 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         }
 
         for (String jwtFuzzedToken : jwtFuzzedTokens) {
-            result = this.checkIfAttackIsSuccessful(msg, param, jwtFuzzedToken, value);
+            result =
+                    this.sendFuzzedMsgAndCheckIfAttackSuccessful(msg, param, jwtFuzzedToken, value);
             if (result) {
+                LOGGER.info("Attack for Fuzzed Token " + jwtFuzzedToken + " is Successful");
                 return result;
             }
         }
@@ -201,7 +208,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      * @param jwtToken
      * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
-    private boolean checkIfAttackIsSuccessful(
+    private boolean sendFuzzedMsgAndCheckIfAttackSuccessful(
             HttpMessage msg, String param, String jwtToken, String value) {
         HttpMessage newMsg = this.getNewMsg();
         this.setParameter(newMsg, param, JWTUtils.addingJWTToParamValue(value, jwtToken));
