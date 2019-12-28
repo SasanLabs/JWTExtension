@@ -185,24 +185,33 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         // below link
         // https://stackoverflow.com/questions/58044813/how-to-create-a-jwt-in-java-with-the-secret-base64-encoded
 
-        result = this.performBruteForceAttack(msg, param, jwtTokenBean, value);
+        result = this.performBruteForceAttack(jwtTokenBean, msg, param);
         return result;
     }
 
     /**
      * performs attack by brute forcing JWT implementation.
      *
-     * @param msg
-     * @param param
      * @param jwtTokenBean
      * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
     private boolean performBruteForceAttack(
-            HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
-        BruteforceAttack bruteforceAttack =
-                new BruteforceAttack(msg, param, value, jwtTokenBean, this);
+            JWTTokenBean jwtTokenBean, HttpMessage msg, String param) {
+        BruteforceAttack bruteforceAttack = new BruteforceAttack(jwtTokenBean, this, param, msg);
         bruteforceAttack.execute();
         return false;
+    }
+
+    public void bingo(
+            int risk,
+            int confidence,
+            String uri,
+            String param,
+            String attack,
+            String otherInfo,
+            String evidence,
+            HttpMessage msg) {
+        super.bingo(risk, confidence, uri, param, attack, otherInfo, evidence, msg);
     }
 
     /**

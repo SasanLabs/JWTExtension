@@ -186,7 +186,7 @@ public class JWTUtils {
     public static PublicKey getRSAPublicKey()
             throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
         // TODO if public key at path is not present
-        String publicKeyPath = JWTConfiguration.getInstance().getPublicKeyPath();
+        String publicKeyPath = JWTConfiguration.getInstance().getTrustStorePath();
         byte[] publicKeyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
         X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
         KeyFactory kf = KeyFactory.getInstance("RSA");

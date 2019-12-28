@@ -31,7 +31,11 @@ package org.zaproxy.zap.extension.jwt;
  */
 public class JWTConfiguration {
 
-    private String publicKeyPath;
+    private String trustStorePath;
+
+    // TODO instead of storing password we will read the JKS and load it inmemory. Need to check
+    // with @thc202 more on this.
+    private char[] trustStorePassword;
 
     private int threadCount;
 
@@ -52,12 +56,12 @@ public class JWTConfiguration {
         return jwtConfiguration;
     }
 
-    public String getPublicKeyPath() {
-        return publicKeyPath;
+    public String getTrustStorePath() {
+        return trustStorePath;
     }
 
-    public void setPublicKeyPath(String trustStorePath) {
-        this.publicKeyPath = trustStorePath;
+    public void setTrustStorePath(String trustStorePath) {
+        this.trustStorePath = trustStorePath;
     }
 
     public int getThreadCount() {
@@ -74,5 +78,13 @@ public class JWTConfiguration {
 
     public void setHmacMaxKeyLength(int hmacMaxKeyLength) {
         this.hmacMaxKeyLength = hmacMaxKeyLength;
+    }
+
+    public char[] getTrustStorePassword() {
+        return trustStorePassword;
+    }
+
+    public void setTrustStorePassword(char[] trustStorePassword) {
+        this.trustStorePassword = trustStorePassword;
     }
 }
