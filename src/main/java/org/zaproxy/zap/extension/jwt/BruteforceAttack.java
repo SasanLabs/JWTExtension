@@ -22,10 +22,15 @@ package org.zaproxy.zap.extension.jwt;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_ALGORITHM_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_HMAC_ALGORITHM_IDENTIFIER;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.MACSigner;
 import java.io.UnsupportedEncodingException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
 
 /**
@@ -47,40 +52,42 @@ public class BruteforceAttack {
     // For now fixing it but in future we need to move it to JWTConfigurations
     private static final String DEFAULT_SECRET_KEY_CHARACTERS =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
+    private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
     private String secretKeyCharacters = "abc";
     private int hmacMaxKeyLength = DEFAULT_SECRET_KEY_CHARACTERS.length();
     private int threadCount;
     // static int count = 0;
 
-    private HttpMessage originalMsg;
-    private String param;
-    private String originalValue;
     private JWTTokenBean jwtTokenBean;
     private JWTActiveScanner jwtActiveScanner;
+    private String param;
+    private HttpMessage msg;
     private boolean isAttackSuccessful = false;
 
+    /**
+     * @param jwtTokenBean Parsed JWT Token Bean
+     * @param jwtActiveScanner
+     * @param msg original Http Message
+     * @param param parameter having JWT token
+     */
     public BruteforceAttack(
-            HttpMessage originalMsg,
-            String param,
-            String originalValue,
             JWTTokenBean jwtTokenBean,
-            JWTActiveScanner jwtActiveScanner) {
-        this.originalMsg = originalMsg;
-        this.param = param;
-        this.originalValue = originalValue;
-        this.jwtTokenBean = jwtTokenBean;
+            JWTActiveScanner jwtActiveScanner,
+            String param,
+            HttpMessage msg) {
         this.jwtActiveScanner = jwtActiveScanner;
+        this.jwtTokenBean = jwtTokenBean;
+        this.param = param;
+        this.msg = msg;
     }
 
     public void executeInMultipleThreads(Supplier<Void> task) {
         threadCount = JWTConfiguration.getInstance().getThreadCount();
         hmacMaxKeyLength = JWTConfiguration.getInstance().getHmacMaxKeyLength();
-        CompletableFuture<Void> completableFuture = CompletableFuture.supplyAsync(task);
+        CompletableFuture.supplyAsync(task);
     }
 
-    private void bruteForceHMACSecretKey(StringBuilder secretKey, int index)
-            throws UnsupportedEncodingException {
+    private void bruteForceHMACSecretKey(StringBuilder secretKey, int index) {
         if (isAttackSuccessful || this.jwtActiveScanner.isStop()) {
             return;
         }
@@ -89,18 +96,40 @@ public class BruteforceAttack {
             Supplier<Void> attackTask =
                     () -> {
                         if (!isAttackSuccessful && !this.jwtActiveScanner.isStop()) {
-                            // Generate Token
-                            // Call the sendAndRevieve and then comparison
-                            // if successFul
-                            // Update the isAttackSyccessFull
-                            isAttackSuccessful = true;
+                            String tokenToBeSigned =
+                                    this.jwtTokenBean.getHeader()
+                                            + JWTUtils.JWT_TOKEN_PERIOD_CHARACTER
+                                            + this.jwtTokenBean.getPayload();
+                            String base64EncodedSignature;
+                            try {
+                                base64EncodedSignature =
+                                        JWTUtils.getBase64EncodedHMACSignedToken(
+                                                JWTUtils.getBytes(tokenToBeSigned),
+                                                JWTUtils.getBytes(secretKey.toString()));
+                                if (base64EncodedSignature.equals(
+                                        JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
+                                                this.jwtTokenBean.getSignature()))) {
+                                    isAttackSuccessful = true;
+                                    jwtActiveScanner.bingo(
+                                            Alert.RISK_HIGH,
+                                            Alert.CONFIDENCE_HIGH,
+                                            msg.getRequestHeader().getURI().toString(),
+                                            param,
+                                            null,
+                                            null,
+                                            "Secret Key "
+                                                    + secretKey.toString()
+                                                    + " found is smaller than the specification",
+                                            msg);
+                                }
+                            } catch (UnsupportedEncodingException
+                                    | JWTExtensionValidationException e) {
+                                LOGGER.error("Error occurred while generating Signed Token", e);
+                            }
                         }
                         return null;
                     };
             this.executeInMultipleThreads(attackTask);
-            // Might not work as we want to add extra things to alert like the new secretKey
-            this.jwtActiveScanner.sendFuzzedMsgAndCheckIfAttackSuccessful(
-                    this.originalMsg, this.param, this.jwtTokenBean.getToken(), this.originalValue);
         } else {
             for (int i = 0; i < secretKeyCharacters.length(); i++) {
                 bruteForceHMACSecretKey(secretKey.append(secretKeyCharacters.charAt(i)), index + 1);
@@ -111,26 +140,37 @@ public class BruteforceAttack {
 
     public void bruteForceHMACSecretKey() {
         StringBuilder secretKey = new StringBuilder();
-        try {
-            this.bruteForceHMACSecretKey(secretKey, 0);
-        } catch (UnsupportedEncodingException e) {
-            // Need to handle all these.
-        }
+        this.bruteForceHMACSecretKey(secretKey, 0);
     }
 
     public void execute() {
         JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
         String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
         if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
+            try {
+                int minimumRequiredKeyLength =
+                        MACSigner.getMinRequiredSecretLength(JWSAlgorithm.parse(algoType));
+                if (minimumRequiredKeyLength > this.hmacMaxKeyLength) {
+                    LOGGER.info(
+                            "Provided Key Length is "
+                                    + this.hmacMaxKeyLength
+                                    + " smaller than required Key Length "
+                                    + minimumRequiredKeyLength
+                                    + ". Hence overriding it");
+                    this.hmacMaxKeyLength = minimumRequiredKeyLength;
+                }
+            } catch (JOSEException e) {
+                LOGGER.error("Unable to get the Minimum Required Key Length.", e);
+            }
             this.bruteForceHMACSecretKey();
         } else {
             return;
         }
     }
     //
-    //	public static void main(String[] args) {
-    //		BruteforceAttack bruteforceAttack = new BruteforceAttack();
-    //		bruteforceAttack.createPermutations(null);
-    //		// System.out.println(count);
-    //	}
+    // public static void main(String[] args) {
+    // BruteforceAttack bruteforceAttack = new BruteforceAttack();
+    // bruteforceAttack.createPermutations(null);
+    // // System.out.println(count);
+    // }
 }

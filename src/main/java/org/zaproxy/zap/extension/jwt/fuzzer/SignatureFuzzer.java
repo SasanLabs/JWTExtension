@@ -32,17 +32,24 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.KeyLengthException;
+import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
+import java.security.cert.CertificateException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +57,7 @@ import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
-import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
+import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.JWTUtils;
 
@@ -125,42 +132,63 @@ public class SignatureFuzzer implements JWTFuzzer {
      * key with public key and HMAC will accept it.
      *
      * @param jwtTokenBean
-     * @return
-     * @throws JSONException
-     * @throws IOException
-     * @throws InvalidKeySpecException
+     * @param fuzzedTokens
+     * @throws KeyStoreException
      * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     * @throws SignatureException
-     * @throws JWTExtensionValidationException
+     * @throws CertificateException
+     * @throws FileNotFoundException
+     * @throws IOException
+     * @throws KeyLengthException
+     * @throws JOSEException
+     * @throws ParseException
      */
-    @Deprecated
-    // Not used need to design using nimbus jose
-    private String getAlgoKeyConfusionFuzzedToken(JWTTokenBean jwtTokenBean)
-            throws JWTExtensionValidationException, JSONException, NoSuchAlgorithmException,
-                    InvalidKeySpecException, IOException {
-        String fuzzedToken = null;
-        JSONObject jwtHeaderJSON = new JSONObject(jwtTokenBean.getHeader());
-        String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
-        if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
-            String jwtFuzzedHeader = String.format(JWT_HEADER_WITH_ALGO_PLACEHOLDER, HMAC_256);
-            String base64EncodedFuzzedHeaderAndPayload =
-                    JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(jwtFuzzedHeader)
-                            + JWT_TOKEN_PERIOD_CHARACTER
-                            + JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
-                                    jwtTokenBean.getPayload());
-            byte[] base64EncodedFuzzedHeaderAndPayloadBytes =
-                    JWTUtils.getBytes(base64EncodedFuzzedHeaderAndPayload);
-            String base64EncodedFuzzedTokenSign =
-                    JWTUtils.getBase64EncodedHMACSignedToken(
-                            base64EncodedFuzzedHeaderAndPayloadBytes,
-                            JWTUtils.getRSAPublicKey().getEncoded());
-            fuzzedToken =
-                    base64EncodedFuzzedHeaderAndPayload
-                            + JWT_TOKEN_PERIOD_CHARACTER
-                            + base64EncodedFuzzedTokenSign;
+    private void getAlgoKeyConfusionFuzzedToken(
+            JWTTokenBean jwtTokenBean, List<String> fuzzedTokens) {
+        try {
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            String trustStorePath = JWTConfiguration.getInstance().getTrustStorePath();
+            if (trustStorePath == null) {
+                trustStorePath = System.getProperty("javax.net.ssl.trustStore");
+            }
+            char[] password = JWTConfiguration.getInstance().getTrustStorePassword();
+            keyStore.load(new FileInputStream(trustStorePath), password);
+
+            JWKSet jwkSet = JWKSet.load(keyStore, null);
+            List<JWK> trustedKeys = jwkSet.getKeys();
+            JSONObject jwtHeaderJSON = new JSONObject(jwtTokenBean.getHeader());
+            String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
+            if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
+                String jwtFuzzedHeader = String.format(JWT_HEADER_WITH_ALGO_PLACEHOLDER, HMAC_256);
+                String base64EncodedFuzzedHeaderAndPayload =
+                        JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(jwtFuzzedHeader)
+                                + JWT_TOKEN_PERIOD_CHARACTER
+                                + JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
+                                        jwtTokenBean.getPayload());
+                for (JWK jwk : trustedKeys) {
+                    try {
+                        if (jwk instanceof RSAKey) {
+                            MACSigner macSigner =
+                                    new MACSigner(((RSAKey) jwk).toPublicKey().getEncoded());
+                            Base64URL signedToken =
+                                    macSigner.sign(
+                                            JWSHeader.parse(jwtFuzzedHeader),
+                                            JWTUtils.getBytes(base64EncodedFuzzedHeaderAndPayload));
+                            jwtTokenBean.setSignature(signedToken.decodeToString());
+                            fuzzedTokens.add(jwtTokenBean.getToken());
+                        }
+                    } catch (UnsupportedEncodingException | JOSEException | ParseException e) {
+                        LOGGER.error(
+                                "Exception occurred while creating fuzzed token for confusion scenario",
+                                e);
+                    }
+                }
+            }
+        } catch (KeyStoreException
+                | NoSuchAlgorithmException
+                | CertificateException
+                | IOException e) {
+            LOGGER.error("Exception occurred while getting fuzzed token for confusion scenario", e);
         }
-        return fuzzedToken;
     }
 
     @Override
@@ -169,10 +197,7 @@ public class SignatureFuzzer implements JWTFuzzer {
 
         try {
             populateTokenSignedWithCustomPrivateKey(jwtTokenBean, fuzzedTokens);
-            // String confusionFuzzedToken = getAlgoKeyConfusionFuzzedToken(jwtTokenBean);
-            // if (Objects.nonNull(confusionFuzzedToken)) {
-            // fuzzedTokens.add(confusionFuzzedToken);
-            // }
+            this.getAlgoKeyConfusionFuzzedToken(jwtTokenBean, fuzzedTokens);
             fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
 
         } catch (NoSuchAlgorithmException

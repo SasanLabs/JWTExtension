@@ -27,10 +27,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.io.File;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
@@ -68,12 +71,18 @@ public class JWTSettingsUI extends JFrame {
     private JWTConfiguration jwtConfiguration;
     private JScrollPane settingsScrollPane;
     private JPanel footerPanel;
+    private JPanel settingsPanel;
+    private JTextField threadCountTextField;
+    private JTextField maxHmacKeyLengthTextField;
+    private JFileChooser trustStoreFileChooser;
+    private JPasswordField trustStorePasswordField;
+    private char[] trustStorePassword;
 
     public JWTSettingsUI() {
         jwtConfiguration = JWTConfiguration.getInstance();
         setTitle(JWTI18n.getMessage("jwt.toolmenu.settings"));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(500, 400);
+        setSize(800, 700);
         setLocationRelativeTo(null);
         JPanel contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(4, 4, 4, 4));
@@ -85,6 +94,10 @@ public class JWTSettingsUI extends JFrame {
 
         settingsScrollPane = new JScrollPane();
         contentPane.add(settingsScrollPane, BorderLayout.CENTER);
+        settingsPanel = new JPanel();
+        settingsScrollPane.setViewportView(settingsPanel);
+        GridBagLayout gridBagLayout = new GridBagLayout();
+        settingsPanel.setLayout(gridBagLayout);
 
         footerPanel = new JPanel();
         contentPane.add(footerPanel, BorderLayout.SOUTH);
@@ -93,12 +106,7 @@ public class JWTSettingsUI extends JFrame {
         init();
     }
 
-    public void init() {
-        JPanel settingsPanel = new JPanel();
-        settingsScrollPane.setViewportView(settingsPanel);
-        GridBagLayout gridBagLayout = new GridBagLayout();
-        settingsPanel.setLayout(gridBagLayout);
-
+    private void init() {
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
         gridBagConstraints.anchor = GridBagConstraints.WEST;
         gridBagConstraints.fill = GridBagConstraints.NONE;
@@ -106,17 +114,100 @@ public class JWTSettingsUI extends JFrame {
         gridBagConstraints.gridy = 0;
         gridBagConstraints.gridx = 0;
 
-        final JLabel lblHMACBasedSettings =
-                new JLabel(JWTI18n.getMessage("jwt.settings.hmac.header"));
+        this.hmacSettingsSection(gridBagConstraints);
+        this.rsaSettingsSection(gridBagConstraints);
+
+        gridBagConstraints.gridy++;
+        JButton saveButton = new JButton();
+        saveButton.setText(JWTI18n.getMessage("jwt.settings.button.save"));
+        saveButton.addActionListener(
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        jwtConfiguration.setThreadCount(threadCount);
+                        jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
+                        jwtConfiguration.setTrustStorePath(trustStorePath);
+                        jwtConfiguration.setTrustStorePassword(trustStorePassword);
+                    }
+                });
+        JButton resetButton = new JButton();
+        resetButton.setText(JWTI18n.getMessage("jwt.settings.button.reset"));
+        resetButton.addActionListener(
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        jwtConfiguration.setThreadCount(DEFAULT_THREAD_COUNT);
+                        jwtConfiguration.setHmacMaxKeyLength(DEFAULT_HMAC_MAX_KEY_LENGTH);
+                        jwtConfiguration.setTrustStorePath("");
+                        threadCountTextField.setText("");
+                        maxHmacKeyLengthTextField.setText("");
+                        trustStoreFileChooser.resetChoosableFileFilters();
+                        trustStorePassword = null;
+                    }
+                });
+        footerPanel.add(saveButton, gridBagConstraints);
+        footerPanel.add(resetButton, gridBagConstraints);
+    }
+
+    private void rsaSettingsSection(GridBagConstraints gridBagConstraints) {
+        JLabel lblRSABasedSettings = new JLabel(JWTI18n.getMessage("jwt.settings.rsa.header"));
+        settingsPanel.add(lblRSABasedSettings, gridBagConstraints);
+        gridBagConstraints.gridy++;
+
+        JLabel lblTrustStorePathAttribute =
+                new JLabel(JWTI18n.getMessage("jwt.settings.rsa.trustStorePath"));
+        settingsPanel.add(lblTrustStorePathAttribute, gridBagConstraints);
+
+        gridBagConstraints.gridx++;
+        trustStoreFileChooser = new JFileChooser();
+        trustStoreFileChooser.addActionListener(
+                new ActionListener() {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        File trustStoreFile = trustStoreFileChooser.getSelectedFile();
+                        trustStorePath = trustStoreFile.getAbsolutePath();
+                    }
+                });
+        lblTrustStorePathAttribute.setLabelFor(trustStoreFileChooser);
+        settingsPanel.add(trustStoreFileChooser, gridBagConstraints);
+
+        gridBagConstraints.gridy++;
+        gridBagConstraints.gridx = 0;
+        JLabel lblTrustStorePassword =
+                new JLabel(JWTI18n.getMessage("jwt.settings.rsa.trustStorePassword"));
+        settingsPanel.add(lblTrustStorePassword, gridBagConstraints);
+
+        gridBagConstraints.gridx++;
+        trustStorePasswordField = new JPasswordField();
+        trustStorePasswordField.setColumns(30);
+        trustStorePasswordField.addFocusListener(
+                new FocusListener() {
+                    @Override
+                    public void focusLost(FocusEvent e) {
+                        if (trustStorePasswordField.getPassword() != null) {
+                            trustStorePassword = trustStorePasswordField.getPassword();
+                        }
+                    }
+
+                    @Override
+                    public void focusGained(FocusEvent e) {}
+                });
+        lblTrustStorePassword.setLabelFor(trustStorePasswordField);
+        settingsPanel.add(trustStorePasswordField, gridBagConstraints);
+    }
+
+    private void hmacSettingsSection(GridBagConstraints gridBagConstraints) {
+        JLabel lblHMACBasedSettings = new JLabel(JWTI18n.getMessage("jwt.settings.hmac.header"));
         settingsPanel.add(lblHMACBasedSettings, gridBagConstraints);
         gridBagConstraints.gridy++;
 
-        final JLabel lblThreadCountAttribute =
+        JLabel lblThreadCountAttribute =
                 new JLabel(JWTI18n.getMessage("jwt.settings.hmac.bruteforce.theadCount"));
         settingsPanel.add(lblThreadCountAttribute, gridBagConstraints);
 
         gridBagConstraints.gridx++;
-        JTextField threadCountTextField = new JTextField();
+        threadCountTextField = new JTextField();
         threadCountTextField.setColumns(5);
         threadCountTextField.addFocusListener(
                 new FocusListener() {
@@ -147,7 +238,7 @@ public class JWTSettingsUI extends JFrame {
         settingsPanel.add(lblMaxHmacKeyLengthAttribute, gridBagConstraints);
 
         gridBagConstraints.gridx++;
-        JTextField maxHmacKeyLengthTextField = new JTextField();
+        maxHmacKeyLengthTextField = new JTextField();
         maxHmacKeyLengthTextField.setColumns(5);
         maxHmacKeyLengthTextField.addFocusListener(
                 new FocusListener() {
@@ -174,34 +265,5 @@ public class JWTSettingsUI extends JFrame {
 
         gridBagConstraints.gridy++;
         gridBagConstraints.gridx = 0;
-        final JLabel lblRSABasedSettings =
-                new JLabel(JWTI18n.getMessage("jwt.settings.rsa.header"));
-        settingsPanel.add(lblRSABasedSettings, gridBagConstraints);
-
-        gridBagConstraints.gridy++;
-        JButton saveButton = new JButton();
-        saveButton.setText(JWTI18n.getMessage("jwt.settings.button.save"));
-        saveButton.addActionListener(
-                new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        jwtConfiguration.setThreadCount(threadCount);
-                        jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
-                    }
-                });
-        JButton resetButton = new JButton();
-        resetButton.setText(JWTI18n.getMessage("jwt.settings.button.reset"));
-        resetButton.addActionListener(
-                new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        jwtConfiguration.setThreadCount(DEFAULT_THREAD_COUNT);
-                        jwtConfiguration.setHmacMaxKeyLength(DEFAULT_HMAC_MAX_KEY_LENGTH);
-                        threadCountTextField.setText("");
-                        maxHmacKeyLengthTextField.setText("");
-                    }
-                });
-        footerPanel.add(saveButton, gridBagConstraints);
-        footerPanel.add(resetButton, gridBagConstraints);
     }
 }
