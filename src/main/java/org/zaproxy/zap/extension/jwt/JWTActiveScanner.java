@@ -199,6 +199,9 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      */
     private boolean performBruteForceAttack(
             HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
+        BruteforceAttack bruteforceAttack =
+                new BruteforceAttack(msg, param, value, jwtTokenBean, this);
+        bruteforceAttack.execute();
         return false;
     }
 
@@ -208,7 +211,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      * @param jwtToken
      * @return {@code true} if the vulnerability was found, {@code false} otherwise.
      */
-    private boolean sendFuzzedMsgAndCheckIfAttackSuccessful(
+    protected boolean sendFuzzedMsgAndCheckIfAttackSuccessful(
             HttpMessage msg, String param, String jwtToken, String value) {
         HttpMessage newMsg = this.getNewMsg();
         this.setParameter(newMsg, param, JWTUtils.addingJWTToParamValue(value, jwtToken));

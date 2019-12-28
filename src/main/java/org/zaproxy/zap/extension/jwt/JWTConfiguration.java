@@ -33,6 +33,10 @@ public class JWTConfiguration {
 
     private String publicKeyPath;
 
+    private int threadCount;
+
+    private int hmacMaxKeyLength;
+
     private static volatile JWTConfiguration jwtConfiguration;
 
     private JWTConfiguration() {}
@@ -54,5 +58,21 @@ public class JWTConfiguration {
 
     public void setPublicKeyPath(String trustStorePath) {
         this.publicKeyPath = trustStorePath;
+    }
+
+    public int getThreadCount() {
+        return threadCount;
+    }
+
+    public void setThreadCount(int threadCount) {
+        this.threadCount = threadCount;
+    }
+
+    public int getHmacMaxKeyLength() {
+        return hmacMaxKeyLength;
+    }
+
+    public void setHmacMaxKeyLength(int hmacMaxKeyLength) {
+        this.hmacMaxKeyLength = hmacMaxKeyLength;
     }
 }

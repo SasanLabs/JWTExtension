@@ -31,6 +31,7 @@ public class JWTI18n {
     private static ResourceBundle message;
 
     public static void init() {
+
         message =
                 ResourceBundle.getBundle(
                         JWTI18n.class.getPackage().getName() + ".resources.Messages",

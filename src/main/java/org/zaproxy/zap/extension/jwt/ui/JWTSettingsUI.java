@@ -23,6 +23,11 @@ import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -42,19 +47,27 @@ import org.zaproxy.zap.extension.jwt.JWTI18n;
  */
 public class JWTSettingsUI extends JFrame {
 
-    // Truststore is helpful for RSA based public key sign and validation for HS vulnerability
+    public static final int DEFAULT_THREAD_COUNT = 2;
+
+    public static final int DEFAULT_HMAC_MAX_KEY_LENGTH = 52;
+
+    // Truststore is helpful for RSA based public key sign and validation for HS
+    // vulnerability
     private String trustStorePath;
 
     /**
      * Thread count is used by BruteForce Attack. Please go through {@link
      * org.zaproxy.zap.extension.jwt.BruteforceAttack} for more information
      */
-    private int threadCount;
+    private int threadCount = DEFAULT_THREAD_COUNT;
+
+    private int hmacMaxKeyLength;
 
     private static final long serialVersionUID = 1L;
 
     private JWTConfiguration jwtConfiguration;
     private JScrollPane settingsScrollPane;
+    private JPanel footerPanel;
 
     public JWTSettingsUI() {
         jwtConfiguration = JWTConfiguration.getInstance();
@@ -73,9 +86,9 @@ public class JWTSettingsUI extends JFrame {
         settingsScrollPane = new JScrollPane();
         contentPane.add(settingsScrollPane, BorderLayout.CENTER);
 
-        JPanel footerPanel = new JPanel();
+        footerPanel = new JPanel();
         contentPane.add(footerPanel, BorderLayout.SOUTH);
-        footerPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 4, 4));
+        footerPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 4, 4));
 
         init();
     }
@@ -99,19 +112,96 @@ public class JWTSettingsUI extends JFrame {
         gridBagConstraints.gridy++;
 
         final JLabel lblThreadCountAttribute =
-                new JLabel(JWTI18n.getMessage("jwt.settings.bruteforce.theadCount"));
+                new JLabel(JWTI18n.getMessage("jwt.settings.hmac.bruteforce.theadCount"));
         settingsPanel.add(lblThreadCountAttribute, gridBagConstraints);
 
         gridBagConstraints.gridx++;
         JTextField threadCountTextField = new JTextField();
         threadCountTextField.setColumns(5);
+        threadCountTextField.addFocusListener(
+                new FocusListener() {
+                    @Override
+                    public void focusLost(FocusEvent e) {
+                        try {
+                            if (threadCountTextField.getText() != "") {
+                                threadCount =
+                                        Integer.parseInt(threadCountTextField.getText().trim());
+                            } else {
+                                threadCount = DEFAULT_THREAD_COUNT;
+                            }
+                        } catch (NumberFormatException ex) {
+                            // TODO need to handle exception
+                        }
+                    }
+
+                    @Override
+                    public void focusGained(FocusEvent e) {}
+                });
         lblThreadCountAttribute.setLabelFor(threadCountTextField);
         settingsPanel.add(threadCountTextField, gridBagConstraints);
 
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy++;
+        final JLabel lblMaxHmacKeyLengthAttribute =
+                new JLabel(JWTI18n.getMessage("jwt.settings.hmac.bruteforce.keylength"));
+        settingsPanel.add(lblMaxHmacKeyLengthAttribute, gridBagConstraints);
+
+        gridBagConstraints.gridx++;
+        JTextField maxHmacKeyLengthTextField = new JTextField();
+        maxHmacKeyLengthTextField.setColumns(5);
+        maxHmacKeyLengthTextField.addFocusListener(
+                new FocusListener() {
+                    @Override
+                    public void focusLost(FocusEvent e) {
+                        try {
+                            if (maxHmacKeyLengthTextField.getText() != "") {
+                                hmacMaxKeyLength =
+                                        Integer.parseInt(
+                                                maxHmacKeyLengthTextField.getText().trim());
+                            } else {
+                                hmacMaxKeyLength = DEFAULT_HMAC_MAX_KEY_LENGTH;
+                            }
+                        } catch (NumberFormatException ex) {
+                            // TODO need to handle exception
+                        }
+                    }
+
+                    @Override
+                    public void focusGained(FocusEvent e) {}
+                });
+        lblMaxHmacKeyLengthAttribute.setLabelFor(maxHmacKeyLengthTextField);
+        settingsPanel.add(maxHmacKeyLengthTextField, gridBagConstraints);
+
+        gridBagConstraints.gridy++;
+        gridBagConstraints.gridx = 0;
         final JLabel lblRSABasedSettings =
                 new JLabel(JWTI18n.getMessage("jwt.settings.rsa.header"));
         settingsPanel.add(lblRSABasedSettings, gridBagConstraints);
+
+        gridBagConstraints.gridy++;
+        JButton saveButton = new JButton();
+        saveButton.setText(JWTI18n.getMessage("jwt.settings.button.save"));
+        saveButton.addActionListener(
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        jwtConfiguration.setThreadCount(threadCount);
+                        jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
+                    }
+                });
+        JButton resetButton = new JButton();
+        resetButton.setText(JWTI18n.getMessage("jwt.settings.button.reset"));
+        resetButton.addActionListener(
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        jwtConfiguration.setThreadCount(DEFAULT_THREAD_COUNT);
+                        jwtConfiguration.setHmacMaxKeyLength(DEFAULT_HMAC_MAX_KEY_LENGTH);
+                        threadCountTextField.setText("");
+                        maxHmacKeyLengthTextField.setText("");
+                    }
+                });
+        footerPanel.add(saveButton, gridBagConstraints);
+        footerPanel.add(resetButton, gridBagConstraints);
     }
 }
