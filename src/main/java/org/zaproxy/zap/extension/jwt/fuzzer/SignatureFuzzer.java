@@ -32,7 +32,6 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.KeyLengthException;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.JWK;
@@ -43,7 +42,6 @@ import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.KeyStore;
@@ -85,12 +83,13 @@ public class SignatureFuzzer implements JWTFuzzer {
      * Payload is as per the https://nvd.nist.gov/vuln/detail/CVE-2018-0114 vulnerability
      *
      * @param jwtTokenBean
+     * @param fuzzedTokens
      * @throws NoSuchAlgorithmException
      * @throws JOSEException
      * @throws ParseException
      */
-    private void populateTokenSignedWithCustomPrivateKey(
-            JWTTokenBean jwtTokenBean, List<String> fuzzedToken)
+    public void populateTokenSignedWithCustomPrivateKey(
+            JWTTokenBean jwtTokenBean, List<String> fuzzedTokens)
             throws NoSuchAlgorithmException, JOSEException, ParseException {
         JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
         JSONObject payloadJSONObject = new JSONObject(jwtTokenBean.getPayload());
@@ -115,7 +114,7 @@ public class SignatureFuzzer implements JWTFuzzer {
                             JWSHeader.parse(headerJSONObject.toString()),
                             JWTClaimsSet.parse(payloadJSONObject.toString()));
             signedJWT.sign(signer);
-            fuzzedToken.add(signedJWT.serialize());
+            fuzzedTokens.add(signedJWT.serialize());
         }
     }
 
@@ -133,14 +132,6 @@ public class SignatureFuzzer implements JWTFuzzer {
      *
      * @param jwtTokenBean
      * @param fuzzedTokens
-     * @throws KeyStoreException
-     * @throws NoSuchAlgorithmException
-     * @throws CertificateException
-     * @throws FileNotFoundException
-     * @throws IOException
-     * @throws KeyLengthException
-     * @throws JOSEException
-     * @throws ParseException
      */
     private void getAlgoKeyConfusionFuzzedToken(
             JWTTokenBean jwtTokenBean, List<String> fuzzedTokens) {

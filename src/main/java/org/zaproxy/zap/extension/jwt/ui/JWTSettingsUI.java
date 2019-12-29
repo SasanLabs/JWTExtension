@@ -54,8 +54,6 @@ public class JWTSettingsUI extends JFrame {
 
     public static final int DEFAULT_HMAC_MAX_KEY_LENGTH = 52;
 
-    // Truststore is helpful for RSA based public key sign and validation for HS
-    // vulnerability
     private String trustStorePath;
 
     /**
