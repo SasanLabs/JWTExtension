@@ -90,6 +90,16 @@ public class JWTTokenBean {
                 + base64EncodedSignature;
     }
 
+    /**
+     * @return token to be Signed i.e. <base64EncodedHeader>.<base64EncodedPayload>
+     * @throws UnsupportedEncodingException
+     */
+    public String getTokenWithoutSignature() throws UnsupportedEncodingException {
+        String base64EncodedHeader = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(header);
+        String base64EncodedPayload = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(payload);
+        return base64EncodedHeader + JWT_TOKEN_PERIOD_CHARACTER + base64EncodedPayload;
+    }
+
     @Override
     public String toString() {
         return "JWTTokenBean [header="

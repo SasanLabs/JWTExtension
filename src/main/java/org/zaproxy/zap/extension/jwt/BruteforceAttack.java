@@ -34,7 +34,10 @@ import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
 
 /**
- * Executes BruteForce Attack in multiple threads for faster execution. Basic Idea for bruteforce
+ * TODO we can add the Dict based attack and Length based attack. TODO Dict based attack is useful
+ * incase some common key is used. Think more as Dict is much more useful then length based attack
+ *
+ * <p>Executes BruteForce Attack in multiple threads for faster execution. Basic Idea for bruteforce
  * attack is
  *
  * <ol>
@@ -55,8 +58,9 @@ public class BruteforceAttack {
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
     private String secretKeyCharacters = "abc";
     private int hmacMaxKeyLength = DEFAULT_SECRET_KEY_CHARACTERS.length();
+
+    // TODO using threadCount to configure thread pool. Need to check with @thc202
     private int threadCount;
-    // static int count = 0;
 
     private JWTTokenBean jwtTokenBean;
     private JWTActiveScanner jwtActiveScanner;
@@ -96,13 +100,9 @@ public class BruteforceAttack {
             Supplier<Void> attackTask =
                     () -> {
                         if (!isAttackSuccessful && !this.jwtActiveScanner.isStop()) {
-                            String tokenToBeSigned =
-                                    this.jwtTokenBean.getHeader()
-                                            + JWTUtils.JWT_TOKEN_PERIOD_CHARACTER
-                                            + this.jwtTokenBean.getPayload();
-                            String base64EncodedSignature;
                             try {
-                                base64EncodedSignature =
+                                String tokenToBeSigned = jwtTokenBean.getTokenWithoutSignature();
+                                String base64EncodedSignature =
                                         JWTUtils.getBase64EncodedHMACSignedToken(
                                                 JWTUtils.getBytes(tokenToBeSigned),
                                                 JWTUtils.getBytes(secretKey.toString()));
@@ -167,10 +167,4 @@ public class BruteforceAttack {
             return;
         }
     }
-    //
-    // public static void main(String[] args) {
-    // BruteforceAttack bruteforceAttack = new BruteforceAttack();
-    // bruteforceAttack.createPermutations(null);
-    // // System.out.println(count);
-    // }
 }
