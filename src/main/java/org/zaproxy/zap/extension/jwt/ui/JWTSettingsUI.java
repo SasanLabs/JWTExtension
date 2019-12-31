@@ -28,6 +28,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
+import java.util.Arrays;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -37,8 +38,13 @@ import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
+import org.zaproxy.zap.extension.fuzz.impl.AddPayloadDialog;
+import org.zaproxy.zap.extension.fuzz.impl.PayloadGeneratorsContainer;
+import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler;
+import org.zaproxy.zap.extension.httppanel.Message;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTI18n;
+import org.zaproxy.zap.model.MessageLocation;
 
 /**
  * Used to get the input from user regarding truststore path or Api for adding ZAP certificate to
@@ -193,6 +199,66 @@ public class JWTSettingsUI extends JFrame {
                 });
         lblTrustStorePassword.setLabelFor(trustStorePasswordField);
         settingsPanel.add(trustStorePasswordField, gridBagConstraints);
+        JButton showFuzzerPanel = new JButton();
+        showFuzzerPanel.addActionListener(
+                new ActionListener() {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        addFuzzerPanel();
+                    }
+                });
+        settingsPanel.add(showFuzzerPanel);
+
+        // settingsPanel.add(addPayloadDialog);
+    }
+
+    private void addFuzzerPanel() {
+        FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler =
+                new FileStringPayloadGeneratorUIHandler();
+        PayloadGeneratorsContainer payloadGeneratorsContainer =
+                new PayloadGeneratorsContainer(
+                        Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
+        AddPayloadDialog addPayloadDialog =
+                new AddPayloadDialog(
+                        this,
+                        payloadGeneratorsContainer,
+                        new MessageLocation() {
+
+                            @Override
+                            public int compareTo(MessageLocation o) {
+                                // TODO Auto-generated method stub
+                                return 0;
+                            }
+
+                            @Override
+                            public boolean overlaps(MessageLocation otherLocation) {
+                                // TODO Auto-generated method stub
+                                return false;
+                            }
+
+                            @Override
+                            public String getValue() {
+                                // TODO Auto-generated method stub
+                                return "Sasan";
+                            }
+
+                            @Override
+                            public Class<? extends Message> getTargetMessageClass() {
+                                // TODO Auto-generated method stub
+                                return null;
+                            }
+
+                            @Override
+                            public String getDescription() {
+                                // TODO Auto-generated method stub
+                                return null;
+                            }
+                        });
+        addPayloadDialog.pack();
+        addPayloadDialog.setVisible(true);
+        /** Look at the file {@code MessageLocationPayloadsPanel} */
+        // addPayloadDialog.getPayloadGeneratorUI().getPayloadGenerator().iterator()
     }
 
     private void hmacSettingsSection(GridBagConstraints gridBagConstraints) {

@@ -22,11 +22,8 @@ package org.zaproxy.zap.extension.jwt;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 import javax.swing.JMenuItem;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
@@ -106,6 +103,11 @@ public class JWTExtension extends ExtensionAdaptor {
         } catch (Exception e) {
             LOGGER.error("JWT Extension can't be loaded. Configuration not found or invalid", e);
         }
+    }
+
+    @Override
+    public boolean supportsDb(String type) {
+        return true;
     }
 
     @Override

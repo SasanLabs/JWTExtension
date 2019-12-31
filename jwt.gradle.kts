@@ -14,4 +14,5 @@ dependencies {
     implementation("org.json:json:20190722")
     //https://mvnrepository.com/artifact/com.nimbusds/nimbus-jose-jwt
     implementation("com.nimbusds:nimbus-jose-jwt:8.3")
+    implementation(project(":addOns:fuzz"))
 }

@@ -44,4 +44,8 @@ public class JWTI18n {
         }
         return "";
     }
+
+    public static ResourceBundle getResourceBundle() {
+        return message;
+    }
 }
