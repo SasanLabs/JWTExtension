@@ -188,7 +188,7 @@ public class SignatureFuzzer implements JWTFuzzer {
 
         try {
             populateTokenSignedWithCustomPrivateKey(jwtTokenBean, fuzzedTokens);
-            this.getAlgoKeyConfusionFuzzedToken(jwtTokenBean, fuzzedTokens);
+            // this.getAlgoKeyConfusionFuzzedToken(jwtTokenBean, fuzzedTokens);
             fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
 
         } catch (NoSuchAlgorithmException

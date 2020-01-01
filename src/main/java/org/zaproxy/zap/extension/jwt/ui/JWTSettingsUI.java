@@ -38,6 +38,7 @@ import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
+import javax.swing.filechooser.FileFilter;
 import org.zaproxy.zap.extension.fuzz.impl.AddPayloadDialog;
 import org.zaproxy.zap.extension.fuzz.impl.PayloadGeneratorsContainer;
 import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler;
@@ -82,15 +83,20 @@ public class JWTSettingsUI extends JFrame {
     private JPasswordField trustStorePasswordField;
     private char[] trustStorePassword;
 
+    private AddPayloadDialog addFuzzerPayloadDialog;
+
+    private JButton trustStoreFileChooserButton;
+    private JTextField trustStoreFileChooserTextField;
+
     public JWTSettingsUI() {
         jwtConfiguration = JWTConfiguration.getInstance();
         setTitle(JWTI18n.getMessage("jwt.toolmenu.settings"));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(800, 700);
+        setSize(700, 400);
         setLocationRelativeTo(null);
         JPanel contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(4, 4, 4, 4));
-        contentPane.setLayout(new BorderLayout(0, 0));
+        contentPane.setLayout(new BorderLayout(1, 1));
         setContentPane(contentPane);
 
         JLabel lblHeaderlabel = new JLabel(JWTI18n.getMessage("jwt.settings.header"));
@@ -107,6 +113,9 @@ public class JWTSettingsUI extends JFrame {
         contentPane.add(footerPanel, BorderLayout.SOUTH);
         footerPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 4, 4));
 
+        createFuzzerPayloadDialog();
+        this.addFileChooserTextField();
+        this.trustStoreFileChooserButton();
         init();
     }
 
@@ -114,7 +123,6 @@ public class JWTSettingsUI extends JFrame {
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
         gridBagConstraints.anchor = GridBagConstraints.WEST;
         gridBagConstraints.fill = GridBagConstraints.NONE;
-        gridBagConstraints.weightx = 1.0;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.gridx = 0;
 
@@ -132,6 +140,10 @@ public class JWTSettingsUI extends JFrame {
                         jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
                         jwtConfiguration.setTrustStorePath(trustStorePath);
                         jwtConfiguration.setTrustStorePassword(trustStorePassword);
+                        jwtConfiguration.setPayloadGenerator(
+                                addFuzzerPayloadDialog
+                                        .getPayloadGeneratorUI()
+                                        .getPayloadGenerator());
                     }
                 });
         JButton resetButton = new JButton();
@@ -145,12 +157,59 @@ public class JWTSettingsUI extends JFrame {
                         jwtConfiguration.setTrustStorePath("");
                         threadCountTextField.setText("");
                         maxHmacKeyLengthTextField.setText("");
-                        trustStoreFileChooser.resetChoosableFileFilters();
+                        jwtConfiguration.setPayloadGenerator(null);
                         trustStorePassword = null;
                     }
                 });
         footerPanel.add(saveButton, gridBagConstraints);
         footerPanel.add(resetButton, gridBagConstraints);
+    }
+
+    private void trustStoreFileChooserButton() {
+
+        trustStoreFileChooserButton =
+                new JButton(JWTI18n.getMessage("jwt.settings.filechooser.button"));
+        trustStoreFileChooserButton.addActionListener(
+                new ActionListener() {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        trustStoreFileChooser = new JFileChooser();
+                        trustStoreFileChooser.setFileFilter(
+                                new FileFilter() {
+
+                                    @Override
+                                    public String getDescription() {
+                                        return "KeyStore file format";
+                                    }
+
+                                    @Override
+                                    public boolean accept(File f) {
+                                        return !f.isDirectory() && f.getName().endsWith(".jks");
+                                    }
+                                });
+                        trustStoreFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+                        String path = trustStoreFileChooserTextField.getText();
+                        if (!path.isEmpty()) {
+                            File file = new File(path);
+                            if (file.exists()) {
+                                trustStoreFileChooser.setSelectedFile(file);
+                            }
+                        }
+                        if (trustStoreFileChooser.showOpenDialog(null)
+                                == JFileChooser.APPROVE_OPTION) {
+                            final File selectedFile = trustStoreFileChooser.getSelectedFile();
+
+                            trustStoreFileChooserTextField.setText(selectedFile.getAbsolutePath());
+                        }
+                    }
+                });
+    }
+
+    private void addFileChooserTextField() {
+        trustStoreFileChooserTextField = new JTextField();
+        trustStoreFileChooserTextField.setEditable(false);
+        trustStoreFileChooserTextField.setColumns(25);
     }
 
     private void rsaSettingsSection(GridBagConstraints gridBagConstraints) {
@@ -161,20 +220,11 @@ public class JWTSettingsUI extends JFrame {
         JLabel lblTrustStorePathAttribute =
                 new JLabel(JWTI18n.getMessage("jwt.settings.rsa.trustStorePath"));
         settingsPanel.add(lblTrustStorePathAttribute, gridBagConstraints);
-
         gridBagConstraints.gridx++;
-        trustStoreFileChooser = new JFileChooser();
-        trustStoreFileChooser.addActionListener(
-                new ActionListener() {
 
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        File trustStoreFile = trustStoreFileChooser.getSelectedFile();
-                        trustStorePath = trustStoreFile.getAbsolutePath();
-                    }
-                });
-        lblTrustStorePathAttribute.setLabelFor(trustStoreFileChooser);
-        settingsPanel.add(trustStoreFileChooser, gridBagConstraints);
+        settingsPanel.add(trustStoreFileChooserTextField, gridBagConstraints);
+        gridBagConstraints.gridx++;
+        settingsPanel.add(trustStoreFileChooserButton, gridBagConstraints);
 
         gridBagConstraints.gridy++;
         gridBagConstraints.gridx = 0;
@@ -184,7 +234,7 @@ public class JWTSettingsUI extends JFrame {
 
         gridBagConstraints.gridx++;
         trustStorePasswordField = new JPasswordField();
-        trustStorePasswordField.setColumns(30);
+        trustStorePasswordField.setColumns(25);
         trustStorePasswordField.addFocusListener(
                 new FocusListener() {
                     @Override
@@ -199,27 +249,15 @@ public class JWTSettingsUI extends JFrame {
                 });
         lblTrustStorePassword.setLabelFor(trustStorePasswordField);
         settingsPanel.add(trustStorePasswordField, gridBagConstraints);
-        JButton showFuzzerPanel = new JButton();
-        showFuzzerPanel.addActionListener(
-                new ActionListener() {
-
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        addFuzzerPanel();
-                    }
-                });
-        settingsPanel.add(showFuzzerPanel);
-
-        // settingsPanel.add(addPayloadDialog);
     }
 
-    private void addFuzzerPanel() {
+    private void createFuzzerPayloadDialog() {
         FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler =
                 new FileStringPayloadGeneratorUIHandler();
         PayloadGeneratorsContainer payloadGeneratorsContainer =
                 new PayloadGeneratorsContainer(
                         Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
-        AddPayloadDialog addPayloadDialog =
+        addFuzzerPayloadDialog =
                 new AddPayloadDialog(
                         this,
                         payloadGeneratorsContainer,
@@ -227,38 +265,31 @@ public class JWTSettingsUI extends JFrame {
 
                             @Override
                             public int compareTo(MessageLocation o) {
-                                // TODO Auto-generated method stub
                                 return 0;
                             }
 
                             @Override
                             public boolean overlaps(MessageLocation otherLocation) {
-                                // TODO Auto-generated method stub
                                 return false;
                             }
 
                             @Override
                             public String getValue() {
-                                // TODO Auto-generated method stub
                                 return "Sasan";
                             }
 
                             @Override
                             public Class<? extends Message> getTargetMessageClass() {
-                                // TODO Auto-generated method stub
                                 return null;
                             }
 
                             @Override
                             public String getDescription() {
-                                // TODO Auto-generated method stub
                                 return null;
                             }
                         });
-        addPayloadDialog.pack();
-        addPayloadDialog.setVisible(true);
+        addFuzzerPayloadDialog.pack();
         /** Look at the file {@code MessageLocationPayloadsPanel} */
-        // addPayloadDialog.getPayloadGeneratorUI().getPayloadGenerator().iterator()
     }
 
     private void hmacSettingsSection(GridBagConstraints gridBagConstraints) {
@@ -326,6 +357,26 @@ public class JWTSettingsUI extends JFrame {
                 });
         lblMaxHmacKeyLengthAttribute.setLabelFor(maxHmacKeyLengthTextField);
         settingsPanel.add(maxHmacKeyLengthTextField, gridBagConstraints);
+
+        gridBagConstraints.gridy++;
+        gridBagConstraints.gridx = 0;
+
+        JLabel lblBruteForceKeyAttribute =
+                new JLabel(JWTI18n.getMessage("jwt.settings.hmac.fuzzer.payload.label"));
+        settingsPanel.add(lblBruteForceKeyAttribute, gridBagConstraints);
+        gridBagConstraints.gridx++;
+
+        JButton showFuzzerDialogButton =
+                new JButton(JWTI18n.getMessage("jwt.settings.hmac.fuzzer.payload.add.button"));
+        showFuzzerDialogButton.addActionListener(
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        addFuzzerPayloadDialog.setVisible(true);
+                    }
+                });
+        lblBruteForceKeyAttribute.setLabelFor(showFuzzerDialogButton);
+        settingsPanel.add(showFuzzerDialogButton, gridBagConstraints);
 
         gridBagConstraints.gridy++;
         gridBagConstraints.gridx = 0;
