@@ -21,7 +21,7 @@ package org.zaproxy.zap.extension.jwt;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
@@ -39,8 +39,6 @@ import javax.crypto.spec.SecretKeySpec;
 /** @author KSASAN preetkaran20@gmail.com */
 public class JWTUtils {
 
-    public static final String JWT_TOKEN_ENCODING = "UTF-8";
-
     public static final char JWT_TOKEN_PERIOD_CHARACTER = '.';
 
     public static final String JWT_TOKEN_PERIOD_CHARACTER_REGEX =
@@ -54,7 +52,7 @@ public class JWTUtils {
                             + JWT_TOKEN_PERIOD_CHARACTER_REGEX
                             + "[a-zA-Z0-9_-]*$");
 
-    public static final String BASE64_PADDING_CHARACTER_REGEX = "=";
+    public static final String BASE64_PADDING_CHARACTER_REGEX = "[=]";
 
     public static final String[] NONE_ALGORITHM_VARIANTS = {"none", "None", "NONE", "nOnE"};
 
@@ -62,7 +60,7 @@ public class JWTUtils {
 
     public static final String JWT_RSA_ALGORITHM_IDENTIFIER = "RS";
 
-    public static final String JWT_HMAC_ALGORITHM_IDENTIFIER = "RS";
+    public static final String JWT_HMAC_ALGORITHM_IDENTIFIER = "HS";
 
     public static final String JWT_EXP_ALGORITHM_IDENTIFIER = "exp";
 
@@ -88,11 +86,11 @@ public class JWTUtils {
     public static final String BEARER_TOKEN_REGEX = "(?i)bearer";
 
     public static byte[] getBytes(String token) throws UnsupportedEncodingException {
-        return token.getBytes(Charset.forName(JWT_TOKEN_ENCODING).name());
+        return token.getBytes(StandardCharsets.UTF_8);
     }
 
     private static String getString(byte[] tokenBytes) throws UnsupportedEncodingException {
-        return new String(tokenBytes, Charset.forName(JWT_TOKEN_ENCODING).name());
+        return new String(tokenBytes, StandardCharsets.UTF_8);
     }
 
     /**

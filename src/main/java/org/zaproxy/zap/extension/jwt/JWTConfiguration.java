@@ -19,6 +19,9 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
+import org.zaproxy.zap.extension.fuzz.payloads.Payload;
+import org.zaproxy.zap.extension.fuzz.payloads.generator.PayloadGenerator;
+
 /**
  * This class holds UI configuration and used by JWT Active Scanner for performing JWT based
  * attacks.
@@ -40,6 +43,8 @@ public class JWTConfiguration {
     private int threadCount;
 
     private int hmacMaxKeyLength;
+
+    private PayloadGenerator<? extends Payload> payloadGenerator;
 
     private static volatile JWTConfiguration jwtConfiguration;
 
@@ -86,5 +91,13 @@ public class JWTConfiguration {
 
     public void setTrustStorePassword(char[] trustStorePassword) {
         this.trustStorePassword = trustStorePassword;
+    }
+
+    public PayloadGenerator<? extends Payload> getPayloadGenerator() {
+        return payloadGenerator;
+    }
+
+    public void setPayloadGenerator(PayloadGenerator<? extends Payload> payloadGenerator) {
+        this.payloadGenerator = payloadGenerator;
     }
 }
