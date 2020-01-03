@@ -58,7 +58,7 @@ public class HeaderFuzzer implements JWTFuzzer {
         for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
             for (String headerVariant : this.manipulatingHeaders(noneVariant)) {
                 jwtTokenBean.setHeader(headerVariant);
-                jwtTokenBean.setSignature("".getBytes());
+                jwtTokenBean.setSignature(JWTUtils.getBytes(""));
                 try {
                     fuzzedTokens.add(jwtTokenBean.getToken());
                 } catch (UnsupportedEncodingException e) {

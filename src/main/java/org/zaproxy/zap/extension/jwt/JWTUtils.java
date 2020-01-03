@@ -85,11 +85,11 @@ public class JWTUtils {
 
     public static final String BEARER_TOKEN_REGEX = "(?i)bearer";
 
-    public static byte[] getBytes(String token) throws UnsupportedEncodingException {
+    public static byte[] getBytes(String token) {
         return token.getBytes(StandardCharsets.UTF_8);
     }
 
-    private static String getString(byte[] tokenBytes) throws UnsupportedEncodingException {
+    private static String getString(byte[] tokenBytes) {
         return new String(tokenBytes, StandardCharsets.UTF_8);
     }
 
@@ -158,15 +158,9 @@ public class JWTUtils {
         }
         JWTTokenBean jwtTokenBean = new JWTTokenBean();
         String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX);
-
-        try {
-            jwtTokenBean.setHeader(getString(Base64.getDecoder().decode(getBytes(tokens[0]))));
-            jwtTokenBean.setPayload(getString(Base64.getDecoder().decode(getBytes(tokens[1]))));
-            jwtTokenBean.setSignature(Base64.getDecoder().decode(getBytes(tokens[2])));
-        } catch (UnsupportedEncodingException e) {
-            throw new JWTExtensionValidationException(
-                    "JWT Token:" + jwtToken + " parsing failed", e);
-        }
+        jwtTokenBean.setHeader(getString(Base64.getUrlDecoder().decode(getBytes(tokens[0]))));
+        jwtTokenBean.setPayload(getString(Base64.getUrlDecoder().decode(getBytes(tokens[1]))));
+        jwtTokenBean.setSignature(Base64.getUrlDecoder().decode(getBytes(tokens[2])));
 
         return jwtTokenBean;
     }
