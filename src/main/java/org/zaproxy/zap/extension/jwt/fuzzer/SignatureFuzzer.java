@@ -89,7 +89,7 @@ public class SignatureFuzzer implements JWTFuzzer {
                 0,
                 newSignature,
                 jwtTokenBean.getSignature().length,
-                newSignature.length);
+                nullByteAddedPayload.length);
         cloneJWTTokenBean.setSignature(newSignature);
         return cloneJWTTokenBean.getToken();
     }
@@ -180,7 +180,7 @@ public class SignatureFuzzer implements JWTFuzzer {
                             jwtTokenBean.setSignature(signedToken.decode());
                             fuzzedTokens.add(jwtTokenBean.getToken());
                         }
-                    } catch (UnsupportedEncodingException | JOSEException | ParseException e) {
+                    } catch (JOSEException | ParseException e) {
                         LOGGER.error(
                                 "Exception occurred while creating fuzzed token for confusion scenario",
                                 e);

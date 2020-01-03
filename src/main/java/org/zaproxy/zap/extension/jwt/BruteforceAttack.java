@@ -180,7 +180,7 @@ public class BruteforceAttack {
         while (resettableAutoCloseableIterator.hasNext()) {
             if (isStop()) {
                 LOGGER.info(
-                        "Stoping because either attack is successfull or user has manually stopped the execution");
+                        "Stoping because either attack is successful or user has manually stopped the execution");
                 return;
             }
             String secretKey = resettableAutoCloseableIterator.next().getValue();
