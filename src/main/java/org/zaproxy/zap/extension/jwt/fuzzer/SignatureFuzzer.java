@@ -74,8 +74,23 @@ public class SignatureFuzzer implements JWTFuzzer {
     private String getNullByteFuzzedToken(JWTTokenBean jwtTokenBean)
             throws UnsupportedEncodingException {
         JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(jwtTokenBean);
-        cloneJWTTokenBean.setSignature(
-                cloneJWTTokenBean.getSignature() + NULL_BYTE_CHARACTER + Constant.getEyeCatcher());
+        byte[] nullByteAddedPayload =
+                JWTUtils.getBytes(NULL_BYTE_CHARACTER + Constant.getEyeCatcher());
+        byte[] newSignature =
+                new byte[jwtTokenBean.getSignature().length + nullByteAddedPayload.length];
+        System.arraycopy(
+                jwtTokenBean.getSignature(),
+                0,
+                newSignature,
+                0,
+                jwtTokenBean.getSignature().length);
+        System.arraycopy(
+                nullByteAddedPayload,
+                0,
+                newSignature,
+                jwtTokenBean.getSignature().length,
+                newSignature.length);
+        cloneJWTTokenBean.setSignature(newSignature);
         return cloneJWTTokenBean.getToken();
     }
 
@@ -106,8 +121,6 @@ public class SignatureFuzzer implements JWTFuzzer {
             headerJSONObject.put(JSON_WEB_KEY_HEADER, rsaKey.toJSONObject());
 
             // Getting base64 encoded signed token
-            JWTTokenBean newJWTokenBean = new JWTTokenBean();
-            newJWTokenBean.setPayload(payloadJSONObject.toString());
             JWSSigner signer = new RSASSASigner(rsaKey);
             SignedJWT signedJWT =
                     new SignedJWT(
@@ -164,7 +177,7 @@ public class SignatureFuzzer implements JWTFuzzer {
                                     macSigner.sign(
                                             JWSHeader.parse(jwtFuzzedHeader),
                                             JWTUtils.getBytes(base64EncodedFuzzedHeaderAndPayload));
-                            jwtTokenBean.setSignature(signedToken.decodeToString());
+                            jwtTokenBean.setSignature(signedToken.decode());
                             fuzzedTokens.add(jwtTokenBean.getToken());
                         }
                     } catch (UnsupportedEncodingException | JOSEException | ParseException e) {
