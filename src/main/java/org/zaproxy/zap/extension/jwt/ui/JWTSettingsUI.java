@@ -29,6 +29,8 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
 import java.util.Arrays;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -42,10 +44,8 @@ import javax.swing.filechooser.FileFilter;
 import org.zaproxy.zap.extension.fuzz.impl.AddPayloadDialog;
 import org.zaproxy.zap.extension.fuzz.impl.PayloadGeneratorsContainer;
 import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler;
-import org.zaproxy.zap.extension.httppanel.Message;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTI18n;
-import org.zaproxy.zap.model.MessageLocation;
 
 /**
  * Used to get the input from user regarding truststore path or Api for adding ZAP certificate to
@@ -82,11 +82,11 @@ public class JWTSettingsUI extends JFrame {
     private JFileChooser trustStoreFileChooser;
     private JPasswordField trustStorePasswordField;
     private char[] trustStorePassword;
-
-    private AddPayloadDialog addFuzzerPayloadDialog;
-
     private JButton trustStoreFileChooserButton;
     private JTextField trustStoreFileChooserTextField;
+
+    private PayloadGeneratorsContainer payloadGeneratorsContainer;
+    private FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler;
 
     public JWTSettingsUI() {
         jwtConfiguration = JWTConfiguration.getInstance();
@@ -113,13 +113,17 @@ public class JWTSettingsUI extends JFrame {
         contentPane.add(footerPanel, BorderLayout.SOUTH);
         footerPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 4, 4));
 
-        createFuzzerPayloadDialog();
         this.addFileChooserTextField();
         this.trustStoreFileChooserButton();
         init();
     }
 
     private void init() {
+        payloadGeneratorUIHandler = new FileStringPayloadGeneratorUIHandler();
+        payloadGeneratorsContainer =
+                new PayloadGeneratorsContainer(
+                        Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
+
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
         gridBagConstraints.anchor = GridBagConstraints.WEST;
         gridBagConstraints.fill = GridBagConstraints.NONE;
@@ -141,7 +145,8 @@ public class JWTSettingsUI extends JFrame {
                         jwtConfiguration.setTrustStorePath(trustStorePath);
                         jwtConfiguration.setTrustStorePassword(trustStorePassword);
                         jwtConfiguration.setPayloadGenerator(
-                                addFuzzerPayloadDialog
+                                payloadGeneratorsContainer
+                                        .getPanel(payloadGeneratorUIHandler.getName())
                                         .getPayloadGeneratorUI()
                                         .getPayloadGenerator());
                     }
@@ -157,6 +162,9 @@ public class JWTSettingsUI extends JFrame {
                         jwtConfiguration.setTrustStorePath("");
                         threadCountTextField.setText("");
                         maxHmacKeyLengthTextField.setText("");
+                        payloadGeneratorsContainer
+                                .getPanel(payloadGeneratorUIHandler.getName())
+                                .clear();
                         jwtConfiguration.setPayloadGenerator(null);
                         trustStorePassword = null;
                     }
@@ -251,44 +259,49 @@ public class JWTSettingsUI extends JFrame {
         settingsPanel.add(trustStorePasswordField, gridBagConstraints);
     }
 
-    private void createFuzzerPayloadDialog() {
-        FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler =
-                new FileStringPayloadGeneratorUIHandler();
-        PayloadGeneratorsContainer payloadGeneratorsContainer =
-                new PayloadGeneratorsContainer(
-                        Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
-        addFuzzerPayloadDialog =
-                new AddPayloadDialog(
-                        this,
-                        payloadGeneratorsContainer,
-                        new MessageLocation() {
+    private void showAddPayloadDialog() {
+        // TODO extending AddPayloadDialog to add the reset button option as shown below.
+        // TODO exposing selectedPanel so that other things can be made easy.
+        AddPayloadDialog addPayloadDialog =
+                new AddPayloadDialog(this, payloadGeneratorsContainer, null) {
 
-                            @Override
-                            public int compareTo(MessageLocation o) {
-                                return 0;
-                            }
+                    protected void initView() {
+                        JPanel buttonsPanel = new JPanel();
+                        buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.LINE_AXIS));
+                        buttonsPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+                        // buttonsPanel.add(super.getHelpButton());
+                        // buttonsPanel.add(Box.createHorizontalGlue());
+                        // buttonsPanel.add(getCancelButton());
+                        // buttonsPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+                        // buttonsPanel.add(getConfirmButton());
+                        JButton button = new JButton();
+                        button.addActionListener(
+                                new ActionListener() {
 
-                            @Override
-                            public boolean overlaps(MessageLocation otherLocation) {
-                                return false;
-                            }
+                                    @Override
+                                    public void actionPerformed(ActionEvent e) {
 
-                            @Override
-                            public String getValue() {
-                                return "Sasan";
-                            }
+                                        payloadGeneratorsContainer
+                                                .getPanel(payloadGeneratorUIHandler.getName())
+                                                .clear();
+                                    }
+                                });
+                        buttonsPanel.add(button);
+                        JPanel panel = new JPanel(new BorderLayout());
 
-                            @Override
-                            public Class<? extends Message> getTargetMessageClass() {
-                                return null;
-                            }
+                        panel.add(getFieldsPanel(), BorderLayout.CENTER);
+                        panel.add(buttonsPanel, BorderLayout.PAGE_END);
 
-                            @Override
-                            public String getDescription() {
-                                return null;
-                            }
-                        });
-        addFuzzerPayloadDialog.pack();
+                        this.setContentPane(panel);
+                    }
+
+                    private static final long serialVersionUID = 1L;
+
+                    @Override
+                    protected void clearFields() {}
+                };
+        addPayloadDialog.pack();
+        addPayloadDialog.setVisible(true);
         /** Look at the file {@code MessageLocationPayloadsPanel} */
     }
 
@@ -372,7 +385,7 @@ public class JWTSettingsUI extends JFrame {
                 new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        addFuzzerPayloadDialog.setVisible(true);
+                        showAddPayloadDialog();
                     }
                 });
         lblBruteForceKeyAttribute.setLabelFor(showFuzzerDialogButton);

@@ -106,8 +106,7 @@ public class JWTUtils {
      */
     public static String getBase64UrlSafeWithoutPaddingEncodedString(String token)
             throws UnsupportedEncodingException {
-        return JWTUtils.getString(Base64.getUrlEncoder().encode(getBytes(token)))
-                .replaceAll(BASE64_PADDING_CHARACTER_REGEX, "");
+        return JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(getBytes(token));
     }
 
     /**
@@ -161,17 +160,14 @@ public class JWTUtils {
         String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX);
 
         try {
-            String header = getString(Base64.getUrlDecoder().decode(getBytes(tokens[0])));
-            String payload = getString(Base64.getUrlDecoder().decode(getBytes(tokens[1])));
-            String sign = getString(Base64.getUrlDecoder().decode(getBytes(tokens[2])));
-            jwtTokenBean.setHeader(header);
-            jwtTokenBean.setPayload(payload);
-            jwtTokenBean.setSignature(sign);
+            jwtTokenBean.setHeader(getString(Base64.getDecoder().decode(getBytes(tokens[0]))));
+            jwtTokenBean.setPayload(getString(Base64.getDecoder().decode(getBytes(tokens[1]))));
+            jwtTokenBean.setSignature(Base64.getDecoder().decode(getBytes(tokens[2])));
         } catch (UnsupportedEncodingException e) {
-            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid", e);
-        } catch (IllegalArgumentException e) {
-            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid", e);
+            throw new JWTExtensionValidationException(
+                    "JWT Token:" + jwtToken + " parsing failed", e);
         }
+
         return jwtTokenBean;
     }
 

@@ -34,7 +34,7 @@ public class JWTTokenBean {
 
     private String payload;
 
-    private String signature;
+    private byte[] signature;
 
     public JWTTokenBean() {}
 
@@ -60,11 +60,11 @@ public class JWTTokenBean {
         this.payload = payload;
     }
 
-    public String getSignature() {
+    public byte[] getSignature() {
         return signature;
     }
 
-    public void setSignature(String signature) {
+    public void setSignature(byte[] signature) {
         this.signature = signature;
     }
 
