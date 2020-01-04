@@ -19,15 +19,21 @@
  */
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class PayloadFuzzer implements JWTFuzzer {
 
+    // TODO add fuzzer to check if it owns Expiry time or not.
+    // This might need private key or smaller expiry time.
+
+    // TODO read
+    // https://github.com/andresriancho/jwt-fuzzer/blob/master/jwtfuzzer/fuzzing_functions/payload_iss.py
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        // TODO Auto-generated method stub
-        return null;
+        List<String> fuzzedTokens = new ArrayList<>();
+        return fuzzedTokens;
     }
 }

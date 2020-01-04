@@ -19,14 +19,14 @@
  */
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
-import static org.zaproxy.zap.extension.jwt.JWTUtils.HMAC_256;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JSON_WEB_KEY_HEADER;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_ALGORITHM_KEY_HEADER;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_EXP_ALGORITHM_IDENTIFIER;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_RSA_ALGORITHM_IDENTIFIER;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_TOKEN_PERIOD_CHARACTER;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.NULL_BYTE_CHARACTER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HMAC_256;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JSON_WEB_KEY_HEADER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY_HEADER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EXP_ALGORITHM_IDENTIFIER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_ALGORITHM_IDENTIFIER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NULL_BYTE_CHARACTER;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -51,13 +51,14 @@ import java.security.cert.CertificateException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
-import org.zaproxy.zap.extension.jwt.JWTUtils;
+import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class SignatureFuzzer implements JWTFuzzer {
@@ -154,36 +155,40 @@ public class SignatureFuzzer implements JWTFuzzer {
             if (trustStorePath == null) {
                 trustStorePath = System.getProperty("javax.net.ssl.trustStore");
             }
-            char[] password = JWTConfiguration.getInstance().getTrustStorePassword();
-            keyStore.load(new FileInputStream(trustStorePath), password);
+            if (Objects.nonNull(trustStorePath)) {
+                char[] password = JWTConfiguration.getInstance().getTrustStorePassword();
+                keyStore.load(new FileInputStream(trustStorePath), password);
 
-            JWKSet jwkSet = JWKSet.load(keyStore, null);
-            List<JWK> trustedKeys = jwkSet.getKeys();
-            JSONObject jwtHeaderJSON = new JSONObject(jwtTokenBean.getHeader());
-            String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
-            if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
-                String jwtFuzzedHeader = String.format(JWT_HEADER_WITH_ALGO_PLACEHOLDER, HMAC_256);
-                String base64EncodedFuzzedHeaderAndPayload =
-                        JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(jwtFuzzedHeader)
-                                + JWT_TOKEN_PERIOD_CHARACTER
-                                + JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
-                                        jwtTokenBean.getPayload());
-                for (JWK jwk : trustedKeys) {
-                    try {
-                        if (jwk instanceof RSAKey) {
-                            MACSigner macSigner =
-                                    new MACSigner(((RSAKey) jwk).toPublicKey().getEncoded());
-                            Base64URL signedToken =
-                                    macSigner.sign(
-                                            JWSHeader.parse(jwtFuzzedHeader),
-                                            JWTUtils.getBytes(base64EncodedFuzzedHeaderAndPayload));
-                            jwtTokenBean.setSignature(signedToken.decode());
-                            fuzzedTokens.add(jwtTokenBean.getToken());
+                JWKSet jwkSet = JWKSet.load(keyStore, null);
+                List<JWK> trustedKeys = jwkSet.getKeys();
+                JSONObject jwtHeaderJSON = new JSONObject(jwtTokenBean.getHeader());
+                String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
+                if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
+                    String jwtFuzzedHeader =
+                            String.format(JWT_HEADER_WITH_ALGO_PLACEHOLDER, HMAC_256);
+                    String base64EncodedFuzzedHeaderAndPayload =
+                            JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(jwtFuzzedHeader)
+                                    + JWT_TOKEN_PERIOD_CHARACTER
+                                    + JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
+                                            jwtTokenBean.getPayload());
+                    for (JWK jwk : trustedKeys) {
+                        try {
+                            if (jwk instanceof RSAKey) {
+                                MACSigner macSigner =
+                                        new MACSigner(((RSAKey) jwk).toPublicKey().getEncoded());
+                                Base64URL signedToken =
+                                        macSigner.sign(
+                                                JWSHeader.parse(jwtFuzzedHeader),
+                                                JWTUtils.getBytes(
+                                                        base64EncodedFuzzedHeaderAndPayload));
+                                jwtTokenBean.setSignature(signedToken.decode());
+                                fuzzedTokens.add(jwtTokenBean.getToken());
+                            }
+                        } catch (JOSEException | ParseException e) {
+                            LOGGER.error(
+                                    "Exception occurred while creating fuzzed token for confusion scenario",
+                                    e);
                         }
-                    } catch (JOSEException | ParseException e) {
-                        LOGGER.error(
-                                "Exception occurred while creating fuzzed token for confusion scenario",
-                                e);
                     }
                 }
             }
@@ -201,7 +206,7 @@ public class SignatureFuzzer implements JWTFuzzer {
 
         try {
             populateTokenSignedWithCustomPrivateKey(jwtTokenBean, fuzzedTokens);
-            // this.getAlgoKeyConfusionFuzzedToken(jwtTokenBean, fuzzedTokens);
+            this.getAlgoKeyConfusionFuzzedToken(jwtTokenBean, fuzzedTokens);
             fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
 
         } catch (NoSuchAlgorithmException

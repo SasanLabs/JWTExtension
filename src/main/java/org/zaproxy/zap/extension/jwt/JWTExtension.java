@@ -90,12 +90,12 @@ public class JWTExtension extends ExtensionAdaptor {
 
             JMenuItem jwtActiveEditorMenu =
                     new JMenuItem(JWTI18n.getMessage("jwt.toolmenu.settings"));
+            JWTSettingsUI jwtSettingsUI = new JWTSettingsUI();
             jwtActiveEditorMenu.addActionListener(
                     new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent e) {
                             LOGGER.info("JWT Settings item");
-                            JWTSettingsUI jwtSettingsUI = new JWTSettingsUI();
                             jwtSettingsUI.setVisible(true);
                         }
                     });
