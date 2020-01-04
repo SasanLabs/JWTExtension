@@ -84,10 +84,9 @@ and signature as empty, it might be an issue. this was a vulnerability in many e
 General issue in verification of token is the structure of verification 
 method which is 
 ``` verify(string token, string verificationKey) ```
-now say server is expecting to verify the algorithm using RSA and say hacker has signed the token with Public key and set
-the Algorithm as "HS" ie HMAC with SHA then while calling verify method, server will send token and Public Key (Why ? because server has signed with RSA so to verify also with RSA public key) but the library will think HS as the algorithm so it will think verificationKey as HMAC secrete key and will return it as a valid.
-```So Solution is that Algorithms to accept algorithm too.```
-but there can be a counter argument that if server is allowing multiple algorithms then how we can handle this usecase.
+now say server is expecting to verify the algorithm using RSA or more specifically if server is only encrypting the token with RSA and say hacker has signed the token with Public key and set the Algorithm as "HS" ie HMAC with SHA then while calling verify method, server will send token and Public Key (Why ? because server only supports RSA) but the library will think HS as the algorithm so it will think verificationKey as HMAC secrete key and will return it as a valid.
+```So Solution is that verification method to accept algorithm too.```
+but there can be a counter argument that if server is allowing multiple algorithms so server might not know which algorithm to pass to the library then how we can handle this usecase?
 Solution is using `kid` header field.
 
 ##### Question is how kid is useful ? #####
