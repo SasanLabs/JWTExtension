@@ -32,6 +32,7 @@ import org.zaproxy.zap.extension.jwt.fuzzer.JWTFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.MiscFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.PayloadFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.SignatureFuzzer;
+import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
 /**
  * JWT plugin used to find the vulnerabilities in JWT implementations. Resources containing more

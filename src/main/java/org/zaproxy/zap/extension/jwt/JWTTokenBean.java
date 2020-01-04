@@ -19,9 +19,10 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_TOKEN_PERIOD_CHARACTER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER;
 
 import java.io.UnsupportedEncodingException;
+import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
 /**
  * JWT token is parsed and broken into Header, Payload and Signature.

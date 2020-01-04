@@ -19,8 +19,8 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_ALGORITHM_KEY_HEADER;
-import static org.zaproxy.zap.extension.jwt.JWTUtils.JWT_HMAC_ALGORITHM_IDENTIFIER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY_HEADER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HMAC_ALGORITHM_IDENTIFIER;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -40,21 +40,26 @@ import org.json.JSONObject;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.zap.extension.fuzz.payloads.Payload;
+import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.utils.ResettableAutoCloseableIterator;
 
 /**
- * TODO we can add the Dict based attack and Length based attack. TODO Dict based attack is useful
- * incase some common key is used. Think more as Dict is much more useful then length based attack
- *
- * <p>Executes BruteForce Attack in multiple threads for faster execution. Basic Idea for bruteforce
+ * Executes BruteForce Attack in multiple threads for faster execution. Basic Idea for bruteforce
  * attack is
  *
  * <ol>
- *   <li>Get the max length of the secret as an input or will be default length as per the HS
- *       algorithm
- *   <li>Get the characters used as the secret as an input or will be default as [a-zA-Z0-9]
- *   <li>Permute the characters then generate HMAC and then run the attack in multiple threads.
+ *   <li>Dictionary based attack where user can provide the dictionary of common secrets and then
+ *       bruteforcing based on the dictionary.
+ *   <li>Common password dictionary provided by ZAP based attack.
+ *   <li>Permutation based attack.
  *       <ol>
+ *         <li>Get the max length of the secret as an input or will be default length as per the HS
+ *             algorithm
+ *         <li>Get the characters used as the secret as an input or will be default as [a-zA-Z0-9]
+ *         <li>Permute the characters then generate HMAC and then run the attack in multiple
+ *             threads.
+ *       </ol>
+ * </ol>
  *
  * @author KSASAN preetkaran20@gmail.com
  */

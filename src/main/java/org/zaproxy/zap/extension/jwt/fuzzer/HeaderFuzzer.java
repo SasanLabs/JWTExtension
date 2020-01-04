@@ -19,17 +19,22 @@
  */
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HEADER_FORMAT_VARIANTS;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NONE_ALGORITHM_VARIANTS;
+
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.log4j.Logger;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
-import org.zaproxy.zap.extension.jwt.JWTUtils;
+import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class HeaderFuzzer implements JWTFuzzer {
 
-    // TODO exchanging algo and type for correct jwt token
+    private static final Logger LOGGER = Logger.getLogger(HeaderFuzzer.class);
+
     // TODO adding JKU etc payloads
     // (https://github.com/andresriancho/jwt-fuzzer/blob/master/jwtfuzzer/fuzzing_functions/header_jku.py)
     // If JKU holds read if there are any vulnerabilities exists.
@@ -55,14 +60,14 @@ public class HeaderFuzzer implements JWTFuzzer {
      */
     private List<String> getNoneHashingAlgorithmFuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<String>();
-        for (String noneVariant : JWTUtils.NONE_ALGORITHM_VARIANTS) {
+        for (String noneVariant : NONE_ALGORITHM_VARIANTS) {
             for (String headerVariant : this.manipulatingHeaders(noneVariant)) {
                 jwtTokenBean.setHeader(headerVariant);
                 jwtTokenBean.setSignature(JWTUtils.getBytes(""));
                 try {
                     fuzzedTokens.add(jwtTokenBean.getToken());
                 } catch (UnsupportedEncodingException e) {
-                    // TODO handling exceptions is left
+                    LOGGER.error("None Algorithm fuzzed token creation failed", e);
                 }
             }
         }
@@ -71,7 +76,7 @@ public class HeaderFuzzer implements JWTFuzzer {
 
     private List<String> manipulatingHeaders(String algo) {
         List<String> fuzzedHeaders = new ArrayList<>();
-        for (String headerVariant : JWTUtils.HEADER_FORMAT_VARIANTS) {
+        for (String headerVariant : HEADER_FORMAT_VARIANTS) {
             String fuzzedHeader = String.format(headerVariant, algo);
             fuzzedHeaders.add(fuzzedHeader);
         }
