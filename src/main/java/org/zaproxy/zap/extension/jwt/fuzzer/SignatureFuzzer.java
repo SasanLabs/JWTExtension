@@ -72,8 +72,9 @@ public class SignatureFuzzer implements JWTFuzzer {
      * @return Null Byte fuzzed token
      * @throws UnsupportedEncodingException
      */
-    private String getNullByteFuzzedToken(JWTTokenBean jwtTokenBean)
+    private void addNullByteFuzzedTokens(JWTTokenBean jwtTokenBean, List<String> fuzzedTokens)
             throws UnsupportedEncodingException {
+        // Appends signature with NullByte plus ZAP eyeCather.
         JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(jwtTokenBean);
         byte[] nullByteAddedPayload =
                 JWTUtils.getBytes(NULL_BYTE_CHARACTER + Constant.getEyeCatcher());
@@ -92,7 +93,11 @@ public class SignatureFuzzer implements JWTFuzzer {
                 jwtTokenBean.getSignature().length,
                 nullByteAddedPayload.length);
         cloneJWTTokenBean.setSignature(newSignature);
-        return cloneJWTTokenBean.getToken();
+        fuzzedTokens.add(cloneJWTTokenBean.getToken());
+
+        // Replaces the signature with NullByte.
+        cloneJWTTokenBean.setSignature(JWTUtils.getBytes(NULL_BYTE_CHARACTER));
+        fuzzedTokens.add(cloneJWTTokenBean.getToken());
     }
 
     /**
@@ -205,10 +210,9 @@ public class SignatureFuzzer implements JWTFuzzer {
         List<String> fuzzedTokens = new ArrayList<>();
 
         try {
-            populateTokenSignedWithCustomPrivateKey(jwtTokenBean, fuzzedTokens);
+            this.populateTokenSignedWithCustomPrivateKey(jwtTokenBean, fuzzedTokens);
             this.getAlgoKeyConfusionFuzzedToken(jwtTokenBean, fuzzedTokens);
-            fuzzedTokens.add(getNullByteFuzzedToken(jwtTokenBean));
-
+            this.addNullByteFuzzedTokens(jwtTokenBean, fuzzedTokens);
         } catch (NoSuchAlgorithmException
                 | JSONException
                 | IOException

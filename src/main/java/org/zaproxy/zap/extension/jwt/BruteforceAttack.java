@@ -81,7 +81,7 @@ public class BruteforceAttack {
     private String param;
     private HttpMessage msg;
     private boolean isAttackSuccessful = false;
-    private List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+    // private List<CompletableFuture<?>> completableFutures = new ArrayList<>();
 
     private ExecutorService executorService;
 
@@ -149,7 +149,8 @@ public class BruteforceAttack {
         return this.executeInMultipleThreads(attackTask);
     }
 
-    private void generatingHMACSecretKeyAndExecutingAttack(StringBuilder secretKey, int index) {
+    private void generatingHMACSecretKeyAndExecutingAttack(
+            StringBuilder secretKey, int index, List<CompletableFuture<?>> completableFutures) {
         if (isStop()) {
             LOGGER.info(
                     "Stopping because either attack is successfull or user has manually stopped the execution");
@@ -161,7 +162,9 @@ public class BruteforceAttack {
         } else {
             for (int i = 0; i < secretKeyCharacters.length(); i++) {
                 generatingHMACSecretKeyAndExecutingAttack(
-                        secretKey.append(secretKeyCharacters.charAt(i)), index + 1);
+                        secretKey.append(secretKeyCharacters.charAt(i)),
+                        index + 1,
+                        completableFutures);
                 secretKey.deleteCharAt(index);
             }
         }
@@ -176,12 +179,15 @@ public class BruteforceAttack {
 
     private void permutationBasedHMACSecretKeyBruteForce() {
         StringBuilder secretKey = new StringBuilder();
-        this.generatingHMACSecretKeyAndExecutingAttack(secretKey, 0);
+        List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+        this.generatingHMACSecretKeyAndExecutingAttack(secretKey, 0, completableFutures);
+        waitForCompletion(completableFutures);
     }
 
     private void fileBasedHMACSecretKeyBruteForce() {
         ResettableAutoCloseableIterator<? extends Payload> resettableAutoCloseableIterator =
                 JWTConfiguration.getInstance().getPayloadGenerator().iterator();
+        List<CompletableFuture<?>> completableFutures = new ArrayList<>();
         while (resettableAutoCloseableIterator.hasNext()) {
             if (isStop()) {
                 LOGGER.info(
@@ -189,55 +195,51 @@ public class BruteforceAttack {
                 return;
             }
             String secretKey = resettableAutoCloseableIterator.next().getValue();
-            this.completableFutures.add(
-                    generateHMACWithSecretKeyAndCheckIfAttackSuccessful(secretKey));
+            completableFutures.add(generateHMACWithSecretKeyAndCheckIfAttackSuccessful(secretKey));
         }
+        waitForCompletion(completableFutures);
     }
 
-    private void waitForCompletion() {
+    private void waitForCompletion(List<CompletableFuture<?>> completableFutures) {
         try {
             CompletableFuture.allOf(
-                            this.completableFutures.toArray(
+                            completableFutures.toArray(
                                     new CompletableFuture<?>[completableFutures.size()]))
                     .get(500, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        } catch (TimeoutException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            LOGGER.error("Error occurred while executing bruteforce attack", e);
+        } finally {
+            completableFutures.clear();
         }
-        this.completableFutures.clear();
     }
 
     public void execute() {
-        JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
-        String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
-        if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
-            try {
-                int minimumRequiredKeyLength =
-                        MACSigner.getMinRequiredSecretLength(JWSAlgorithm.parse(algoType));
-                if (minimumRequiredKeyLength > this.hmacMaxKeyLength) {
-                    LOGGER.info(
-                            "Provided Key Length is "
-                                    + this.hmacMaxKeyLength
-                                    + " smaller than required Key Length "
-                                    + minimumRequiredKeyLength
-                                    + ". Hence overriding it");
-                    this.hmacMaxKeyLength = minimumRequiredKeyLength;
+        try {
+            JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
+            String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
+            if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
+                try {
+                    int minimumRequiredKeyLength =
+                            MACSigner.getMinRequiredSecretLength(JWSAlgorithm.parse(algoType));
+                    if (minimumRequiredKeyLength > this.hmacMaxKeyLength) {
+                        LOGGER.info(
+                                "Provided Key Length is "
+                                        + this.hmacMaxKeyLength
+                                        + " smaller than required Key Length "
+                                        + minimumRequiredKeyLength
+                                        + ". Hence overriding it");
+                        this.hmacMaxKeyLength = minimumRequiredKeyLength;
+                    }
+                } catch (JOSEException e) {
+                    LOGGER.error("Unable to get the Minimum Required Key Length.", e);
                 }
-            } catch (JOSEException e) {
-                LOGGER.error("Unable to get the Minimum Required Key Length.", e);
+                this.fileBasedHMACSecretKeyBruteForce();
+                this.permutationBasedHMACSecretKeyBruteForce();
+            } else {
+                return;
             }
-            this.fileBasedHMACSecretKeyBruteForce();
-            this.waitForCompletion();
-            this.permutationBasedHMACSecretKeyBruteForce();
-            this.waitForCompletion();
-        } else {
-            return;
+        } finally {
+            executorService.shutdown();
         }
     }
 }

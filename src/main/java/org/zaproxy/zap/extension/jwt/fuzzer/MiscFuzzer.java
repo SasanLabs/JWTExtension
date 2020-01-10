@@ -19,15 +19,37 @@
  */
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 
-/** @author preetkaran20@gmail.com KSASAN */
+/**
+ * All the fuzzed token which requires modification to more than one component of JWT token will be
+ * present under MiscFuzzer
+ *
+ * @author preetkaran20@gmail.com KSASAN
+ */
 public class MiscFuzzer implements JWTFuzzer {
+
+    /**
+     *
+     *
+     * <ol>
+     *   <li>Adds empty header/payload/signature
+     *   <li>Adds multiple dots in tokens
+     *       <ol>
+     *
+     * @param fuzzedTokens
+     */
+    private void addingEmptyPayloads(List<String> fuzzedTokens) {
+        fuzzedTokens.add("...");
+        fuzzedTokens.add(".....");
+    }
 
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        // TODO Auto-generated method stub
-        return null;
+        List<String> fuzzedTokens = new ArrayList<String>();
+        addingEmptyPayloads(fuzzedTokens);
+        return fuzzedTokens;
     }
 }

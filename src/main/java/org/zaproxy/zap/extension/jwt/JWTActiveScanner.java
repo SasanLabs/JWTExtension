@@ -22,10 +22,13 @@ package org.zaproxy.zap.extension.jwt;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.iterators.IteratorChain;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
 import org.parosproxy.paros.core.scanner.Alert;
+import org.parosproxy.paros.network.HttpHeader;
 import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.zap.extension.jwt.fuzzer.HeaderFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.JWTFuzzer;
@@ -33,12 +36,14 @@ import org.zaproxy.zap.extension.jwt.fuzzer.MiscFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.PayloadFuzzer;
 import org.zaproxy.zap.extension.jwt.fuzzer.SignatureFuzzer;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
+import org.zaproxy.zap.sharedutils.CookieUtils;
 
 /**
  * JWT plugin used to find the vulnerabilities in JWT implementations. Resources containing more
  * information about vulnerable implementations are: <br>
  *
  * <ol>
+ *   <li>https://tools.ietf.org/html/draft-ietf-oauth-jwt-bcp-06
  *   <li>https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html ->
  *       For in-depth analysis about vulnerabilities in JWT implementation
  *   <li>https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries -> For server
@@ -61,6 +66,13 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     private int maxClientSideRequestCount = 0;
     private int maxServerSideRequestCount = 0;
     private List<JWTFuzzer> fuzzers = new ArrayList<JWTFuzzer>();
+
+    private static final String HTTP_ONLY_COOKIE_ATTRIBUTE = "HttpOnly";
+    private static final String SECURE_COOKIE_ATTRIBUTE = "Secure";
+    private static final String SAME_SITE_ATTRIBUTE = "SameSite";
+    private static final String SAME_SITE_NONE_MODE = "None";
+    private static final String COOKIE_PREFIX_SECURE = "__Secure-";
+    private static final String COOKIE_PREFIX_HOST = "__Host-";
 
     public JWTActiveScanner() {
         fuzzers.add(new HeaderFuzzer());
@@ -147,6 +159,93 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      */
     private boolean performAttackClientSideConfigurations(
             HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
+        // Check Cookie Values
+        boolean paramExists = false;
+        IteratorChain iterator = new IteratorChain();
+        Vector<String> cookies1 = msg.getResponseHeader().getHeaders(HttpHeader.SET_COOKIE);
+
+        if (cookies1 != null) {
+            iterator.addIterator(cookies1.iterator());
+        }
+
+        Vector<String> cookies2 = msg.getResponseHeader().getHeaders(HttpHeader.SET_COOKIE2);
+
+        if (cookies2 != null) {
+            iterator.addIterator(cookies2.iterator());
+        }
+        while (iterator.hasNext()) {
+            String headerValue = (String) iterator.next();
+            if (CookieUtils.hasAttribute(headerValue, param)) {
+                paramExists = true;
+                if (!CookieUtils.hasAttribute(headerValue, HTTP_ONLY_COOKIE_ATTRIBUTE)
+                        || !CookieUtils.hasAttribute(headerValue, SECURE_COOKIE_ATTRIBUTE)) {
+                    this.bingo(
+                            Alert.RISK_HIGH,
+                            Alert.CONFIDENCE_HIGH,
+                            msg.getRequestHeader().getURI().toString(),
+                            param,
+                            "Attack info",
+                            null,
+                            // need to add below
+                            null,
+                            msg);
+                    return true;
+                } else if (!CookieUtils.hasAttribute(headerValue, SAME_SITE_ATTRIBUTE)) {
+                    this.bingo(
+                            Alert.RISK_MEDIUM,
+                            Alert.CONFIDENCE_HIGH,
+                            msg.getRequestHeader().getURI().toString(),
+                            param,
+                            "Attack info",
+                            null,
+                            // need to add below
+                            null,
+                            msg);
+                    return true;
+                } else if (CookieUtils.hasAttribute(headerValue, SAME_SITE_ATTRIBUTE)) {
+                    if (CookieUtils.getAttributeValue(headerValue, SAME_SITE_ATTRIBUTE)
+                            .equalsIgnoreCase(SAME_SITE_NONE_MODE)) {
+                        // Raise an alert informational Alert
+                        this.bingo(
+                                Alert.RISK_INFO,
+                                Alert.CONFIDENCE_HIGH,
+                                msg.getRequestHeader().getURI().toString(),
+                                param,
+                                "Attack info",
+                                null,
+                                // need to add below
+                                null,
+                                msg);
+                        return true;
+                    }
+                } else {
+                    if (!param.startsWith(COOKIE_PREFIX_SECURE)
+                            || !param.startsWith(COOKIE_PREFIX_HOST)) {
+                        // Raise informational alert.
+                        this.bingo(
+                                Alert.RISK_INFO,
+                                Alert.CONFIDENCE_HIGH,
+                                msg.getRequestHeader().getURI().toString(),
+                                param,
+                                "Attack info",
+                                null,
+                                // need to add below
+                                null,
+                                msg);
+                        return true;
+                    }
+                }
+                System.out.println(headerValue);
+                break;
+            }
+        }
+        if (!paramExists) {
+            // Check in URL
+        }
+
+        // Check incase request sends it.
+
+        // Check if stored in Local Storage and Session Storage
         return false;
     }
 
@@ -200,6 +299,20 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             JWTTokenBean jwtTokenBean, HttpMessage msg, String param) {
         BruteforceAttack bruteforceAttack = new BruteforceAttack(jwtTokenBean, this, param, msg);
         bruteforceAttack.execute();
+        return false;
+    }
+
+    /**
+     * Waits some time to check if token is expired and then execute the attack. TODO need to
+     * implement it.
+     *
+     * @param jwtTokenBean
+     * @param msg
+     * @param param
+     * @return
+     */
+    private boolean checkExpiredTokenAttack(
+            JWTTokenBean jwtTokenBean, HttpMessage msg, String param) {
         return false;
     }
 

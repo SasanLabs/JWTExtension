@@ -19,21 +19,60 @@
  */
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NULL_BYTE_CHARACTER;
+
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import net.sf.json.JSONException;
+import org.apache.log4j.Logger;
+import org.json.JSONObject;
+import org.parosproxy.paros.Constant;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 
-/** @author preetkaran20@gmail.com KSASAN */
+/**
+ * TODO need to add more attacks based on Payloads. However it is tough to find payload attacks lets
+ * see.
+ *
+ * @author preetkaran20@gmail.com KSASAN
+ */
 public class PayloadFuzzer implements JWTFuzzer {
 
-    // TODO add fuzzer to check if it owns Expiry time or not.
-    // This might need private key or smaller expiry time.
+    private static final Logger LOGGER = Logger.getLogger(PayloadFuzzer.class);
+
+    /**
+     * @param jwtTokenBean
+     * @param fuzzedTokens
+     */
+    // Payload can be json or any other format as per specification
+    private void populateNullByteFuzzedPayload(
+            JWTTokenBean jwtTokenBean, List<String> fuzzedTokens) {
+        String nullBytePayload = NULL_BYTE_CHARACTER + Constant.getEyeCatcher();
+        JWTTokenBean clonedJWTToken = new JWTTokenBean(jwtTokenBean);
+        try {
+            JSONObject payloadJsonObject = new JSONObject(clonedJWTToken.getPayload());
+            for (String key : payloadJsonObject.keySet()) {
+                Object originalKeyValue = payloadJsonObject.get(key);
+                if (originalKeyValue instanceof String) {
+                    payloadJsonObject.put(key, originalKeyValue.toString() + nullBytePayload);
+                    clonedJWTToken.setPayload(payloadJsonObject.toString());
+                    fuzzedTokens.add(clonedJWTToken.getToken());
+                    payloadJsonObject.put(key, originalKeyValue);
+                }
+            }
+        } catch (JSONException e) {
+            LOGGER.error("Payload is not a valid JSON Object", e);
+        } catch (UnsupportedEncodingException e) {
+            LOGGER.error("Exception occurred while getting the base64 urlsafe encoded token", e);
+        }
+    }
 
     // TODO read
     // https://github.com/andresriancho/jwt-fuzzer/blob/master/jwtfuzzer/fuzzing_functions/payload_iss.py
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<>();
+        populateNullByteFuzzedPayload(jwtTokenBean, fuzzedTokens);
         return fuzzedTokens;
     }
 }
