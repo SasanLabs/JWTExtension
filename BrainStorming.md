@@ -140,6 +140,7 @@ a way to restrict cross site sending of cookies. there are three modes of SameSi
 1. *Strict*, meaning say A.com set the cookies with Strict mode of SameSite and then user opened B.com then while navigating from B.com to A.com, will not send the cookie flagged as Strict.
 2. *Lax*, meaning Say A.com set the cookies with Lax mode of SameSite then when user opened B.com and then Get requests which changes the Top URL of browser like ahref or links, browser will send the cookies with lax flag but if top level url doesn't change then it will not send the lax cookie like in case of Ajax calls or Image rendering. Also Lax flagged cookies will not be sent in case of CSRF prone methods like POST/PUT/DELETE
 3. *None*, Send to A.com even while navigating from B.com
+[More information](https://www.netsparker.com/blog/web-security/same-site-cookie-attribute-prevent-cross-site-request-forgery/)
 
 Default behavior of browsers had changed from None to Lax.
 
