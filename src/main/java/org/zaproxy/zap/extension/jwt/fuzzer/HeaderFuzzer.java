@@ -20,13 +20,15 @@
 package org.zaproxy.zap.extension.jwt.fuzzer;
 
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HEADER_FORMAT_VARIANTS;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWK_SET_URL_HEADER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.KEY_ID_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NONE_ALGORITHM_VARIANTS;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.log4j.Logger;
+import org.json.JSONObject;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
@@ -43,35 +45,41 @@ public class HeaderFuzzer implements JWTFuzzer {
      * Kid field is used to identify Algorithm and Key for JWT. Kid field protects against the
      * {@code SignatureFuzzer#getAlgoKeyConfusionFuzzedToken} payload.
      *
-     * <p>this fuzzed tokens are used to check vulnerabilities in kid implementation.
+     * <p>this fuzzed tokens are used to check vulnerabilities in kid implementation. <a
+     * href=https://tools.ietf.org/html/draft-ietf-oauth-jwt-bcp-06#section-3.10>More
+     * information</a>
      *
      * @param jwtTokenBean
-     * @return
      */
-    private List<String> getKidManipulatedFuzzedToken(JWTTokenBean jwtTokenBean) {
-        List<String> fuzzedTokens = new ArrayList<String>();
-
-        return fuzzedTokens;
+    private void populateKidOrJkuHeaderManipulatedFuzzedToken(
+            JWTTokenBean jwtTokenBean, List<String> fuzzedTokens) {
+        JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
+        JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
+        if (headerJSONObject.has(KEY_ID_HEADER)) {
+            // Kid Field is there.
+            // Kid fields if using LDAP or SQLInjection can cause issues.
+            // Add payload fuzzers for LDAP and SQL Injection.
+        } else if (headerJSONObject.has(JWK_SET_URL_HEADER)) {
+            // Try finding if SSRF is there or not.
+            // Can use timebased attack for knowing if calling malicious site is visited
+        }
     }
 
-    /**
-     * @param jwtTokenBean
-     * @return
-     */
-    private List<String> getNoneHashingAlgorithmFuzzedTokens(JWTTokenBean jwtTokenBean) {
-        List<String> fuzzedTokens = new ArrayList<String>();
+    /** @param jwtTokenBean */
+    private void populateNoneHashingAlgorithmFuzzedTokens(
+            JWTTokenBean jwtTokenBean, List<String> fuzzedTokens) {
+        JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
         for (String noneVariant : NONE_ALGORITHM_VARIANTS) {
             for (String headerVariant : this.manipulatingHeaders(noneVariant)) {
-                jwtTokenBean.setHeader(headerVariant);
-                jwtTokenBean.setSignature(JWTUtils.getBytes(""));
+                clonedJWTokenBean.setHeader(headerVariant);
+                clonedJWTokenBean.setSignature(JWTUtils.getBytes(""));
                 try {
-                    fuzzedTokens.add(jwtTokenBean.getToken());
+                    fuzzedTokens.add(clonedJWTokenBean.getToken());
                 } catch (UnsupportedEncodingException e) {
                     LOGGER.error("None Algorithm fuzzed token creation failed", e);
                 }
             }
         }
-        return fuzzedTokens;
     }
 
     private List<String> manipulatingHeaders(String algo) {
@@ -86,10 +94,8 @@ public class HeaderFuzzer implements JWTFuzzer {
     @Override
     public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
         List<String> fuzzedTokens = new ArrayList<>();
-        List<String> noneFuzzedTokens = getNoneHashingAlgorithmFuzzedTokens(jwtTokenBean);
-        if (CollectionUtils.isNotEmpty(noneFuzzedTokens)) {
-            fuzzedTokens.addAll(noneFuzzedTokens);
-        }
+        populateNoneHashingAlgorithmFuzzedTokens(jwtTokenBean, fuzzedTokens);
+        populateKidOrJkuHeaderManipulatedFuzzedToken(jwtTokenBean, fuzzedTokens);
         return fuzzedTokens;
     }
 }

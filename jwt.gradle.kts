@@ -15,4 +15,5 @@ dependencies {
     //https://mvnrepository.com/artifact/com.nimbusds/nimbus-jose-jwt
     implementation("com.nimbusds:nimbus-jose-jwt:8.3")
     implementation(project(":addOns:fuzz"))
+    implementation(project(":sharedutils"))
 }

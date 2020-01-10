@@ -49,6 +49,10 @@ public interface JWTConstants {
 
     String JSON_WEB_KEY_HEADER = "jwk";
 
+    String JWK_SET_URL_HEADER = "jku";
+
+    String KEY_ID_HEADER = "kid";
+
     String JWT_HEADER_WITH_ALGO_PLACEHOLDER = "{\"typ\":\"JWT\",\"alg\":\"%s\"}";
 
     String[] HEADER_FORMAT_VARIANTS = {
