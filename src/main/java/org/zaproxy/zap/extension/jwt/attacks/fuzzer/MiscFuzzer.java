@@ -17,11 +17,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.zaproxy.zap.extension.jwt.fuzzer;
+package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
  * All the fuzzed token which requires modification to more than one component of JWT token will be
@@ -30,6 +32,8 @@ import org.zaproxy.zap.extension.jwt.JWTTokenBean;
  * @author preetkaran20@gmail.com KSASAN
  */
 public class MiscFuzzer implements JWTFuzzer {
+
+    private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.miscFuzzer.";
 
     /**
      *
@@ -41,15 +45,24 @@ public class MiscFuzzer implements JWTFuzzer {
      *
      * @param fuzzedTokens
      */
-    private void addingEmptyPayloads(List<String> fuzzedTokens) {
-        fuzzedTokens.add("...");
-        fuzzedTokens.add(".....");
+    private void addingEmptyPayloads(
+            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens) {
+        vulnerabilityTypeAndFuzzedTokens
+                .put(VulnerabilityType.EMPTY_TOKENS, new ArrayList<String>())
+                .add("...");
+        vulnerabilityTypeAndFuzzedTokens.get(VulnerabilityType.EMPTY_TOKENS).add(".....");
     }
 
     @Override
-    public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        List<String> fuzzedTokens = new ArrayList<String>();
-        addingEmptyPayloads(fuzzedTokens);
-        return fuzzedTokens;
+    public LinkedHashMap<VulnerabilityType, List<String>> fuzzedTokens(JWTTokenBean jwtTokenBean) {
+        LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens =
+                new LinkedHashMap<VulnerabilityType, List<String>>();
+        addingEmptyPayloads(vulnerabilityTypeAndFuzzedTokens);
+        return vulnerabilityTypeAndFuzzedTokens;
+    }
+
+    @Override
+    public String getFuzzerMessagePrefix() {
+        return MESSAGE_PREFIX;
     }
 }

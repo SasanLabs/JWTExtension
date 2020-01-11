@@ -17,13 +17,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.zaproxy.zap.extension.jwt.fuzzer;
+package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
- * Common interface for all the fuzzers.
+ * Common interface for all the jwt fuzzers.
  *
  * @author preetkaran20@gmail.com KSASAN
  */
@@ -33,7 +35,10 @@ public interface JWTFuzzer {
      * Manipulates the JWT token and returns all the manipulated tokens
      *
      * @param jwtTokenBean
-     * @return List of manipulated tokens
+     * @return vulnerabilityType and List of manipulated tokens map
      */
-    public List<String> fuzzedTokens(JWTTokenBean jwtTokenBean);
+    LinkedHashMap<VulnerabilityType, List<String>> fuzzedTokens(JWTTokenBean jwtTokenBean);
+
+    /** @return message key prefix for fuzzer */
+    String getFuzzerMessagePrefix();
 }

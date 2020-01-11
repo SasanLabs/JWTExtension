@@ -65,7 +65,7 @@ public class JWTSettingsUI extends JFrame {
 
     /**
      * Thread count is used by BruteForce Attack. Please go through {@link
-     * org.zaproxy.zap.extension.jwt.BruteforceAttack} for more information
+     * org.zaproxy.zap.extension.jwt.attacks.BruteforceAttack} for more information
      */
     private int threadCount = DEFAULT_THREAD_COUNT;
 
