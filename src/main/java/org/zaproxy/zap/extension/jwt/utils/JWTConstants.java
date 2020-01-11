@@ -72,4 +72,13 @@ public interface JWTConstants {
     String BEARER_TOKEN_REGEX = "(?i)bearer";
 
     String BEARER_TOKEN_KEY = "Bearer";
+
+    /** Constants related to Client Side Vulnerabilities in implementation of JWT */
+    String HTTP_ONLY_COOKIE_ATTRIBUTE = "HttpOnly";
+
+    String SECURE_COOKIE_ATTRIBUTE = "Secure";
+    String SAME_SITE_ATTRIBUTE = "SameSite";
+    String SAME_SITE_NONE_MODE = "None";
+    String COOKIE_PREFIX_SECURE = "__Secure-";
+    String COOKIE_PREFIX_HOST = "__Host-";
 }
