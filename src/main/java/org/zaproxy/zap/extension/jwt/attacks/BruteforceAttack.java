@@ -43,6 +43,7 @@ import org.zaproxy.zap.extension.fuzz.payloads.Payload;
 import org.zaproxy.zap.extension.jwt.JWTActiveScanner;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
+import org.zaproxy.zap.extension.jwt.JWTI18n;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.utils.ResettableAutoCloseableIterator;
@@ -76,6 +77,7 @@ public class BruteforceAttack {
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
     private String secretKeyCharacters = "abc";
     private int hmacMaxKeyLength = DEFAULT_SECRET_KEY_CHARACTERS.length();
+    private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.bruteForce.";
 
     // TODO using threadCount to configure thread pool. Need to check with @thc202
     private int threadCount;
@@ -112,6 +114,26 @@ public class BruteforceAttack {
         return CompletableFuture.supplyAsync(task, executorService);
     }
 
+    private void raiseAlert(
+            String messagePrefix,
+            int risk,
+            int confidence,
+            String param,
+            String value,
+            HttpMessage msg) {
+        this.jwtActiveScanner.bingo(
+                risk,
+                confidence,
+                JWTI18n.getMessage(messagePrefix + ".name"),
+                JWTI18n.getMessage(messagePrefix + ".desc"),
+                msg.getRequestHeader().getURI().toString(),
+                param,
+                value,
+                JWTI18n.getMessage(messagePrefix + ".refs"),
+                JWTI18n.getMessage(messagePrefix + ".soln"),
+                msg);
+    }
+
     private CompletableFuture<Void> generateHMACWithSecretKeyAndCheckIfAttackSuccessful(
             String secretKey) {
         Supplier<Void> attackTask =
@@ -132,16 +154,12 @@ public class BruteforceAttack {
                                 JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
                                         this.jwtTokenBean.getSignature()))) {
                             isAttackSuccessful = true;
-                            jwtActiveScanner.bingo(
+                            raiseAlert(
+                                    MESSAGE_PREFIX,
                                     Alert.RISK_HIGH,
                                     Alert.CONFIDENCE_HIGH,
-                                    msg.getRequestHeader().getURI().toString(),
-                                    param,
-                                    null,
-                                    null,
-                                    "Secret Key "
-                                            + secretKey.toString()
-                                            + " found is smaller than the specification",
+                                    this.param,
+                                    secretKey,
                                     msg);
                         }
                     } catch (UnsupportedEncodingException | JWTExtensionValidationException e) {
@@ -156,12 +174,13 @@ public class BruteforceAttack {
             StringBuilder secretKey, int index, List<CompletableFuture<?>> completableFutures) {
         if (isStop()) {
             LOGGER.info(
-                    "Stopping because either attack is successfull or user has manually stopped the execution");
+                    "Stopping because either attack is successful or user has manually stopped the execution");
             return;
         }
         if (index == hmacMaxKeyLength) {
             completableFutures.add(
                     this.generateHMACWithSecretKeyAndCheckIfAttackSuccessful(secretKey.toString()));
+            this.jwtActiveScanner.decreaseRequestCount();
         } else {
             for (int i = 0; i < secretKeyCharacters.length(); i++) {
                 generatingHMACSecretKeyAndExecutingAttack(
@@ -195,10 +214,11 @@ public class BruteforceAttack {
             if (isStop()) {
                 LOGGER.info(
                         "Stoping because either attack is successful or user has manually stopped the execution");
-                return;
+                break;
             }
             String secretKey = resettableAutoCloseableIterator.next().getValue();
             completableFutures.add(generateHMACWithSecretKeyAndCheckIfAttackSuccessful(secretKey));
+            this.jwtActiveScanner.decreaseRequestCount();
         }
         waitForCompletion(completableFutures);
     }

@@ -100,14 +100,15 @@ public class SignatureFuzzer implements JWTFuzzer {
                 jwtTokenBean.getSignature().length,
                 nullByteAddedPayload.length);
         cloneJWTTokenBean.setSignature(newSignature);
+        vulnerabilityTypeAndFuzzedTokens.put(VulnerabilityType.NULL_BYTE, new ArrayList<String>());
         vulnerabilityTypeAndFuzzedTokens
-                .put(VulnerabilityType.NULL_BYTE, new ArrayList<String>())
+                .get(VulnerabilityType.NULL_BYTE)
                 .add(cloneJWTTokenBean.getToken());
 
         // Replaces the signature with NullByte.
         cloneJWTTokenBean.setSignature(JWTUtils.getBytes(NULL_BYTE_CHARACTER));
         vulnerabilityTypeAndFuzzedTokens
-                .put(VulnerabilityType.NULL_BYTE, new ArrayList<String>())
+                .get(VulnerabilityType.NULL_BYTE)
                 .add(cloneJWTTokenBean.getToken());
     }
 
