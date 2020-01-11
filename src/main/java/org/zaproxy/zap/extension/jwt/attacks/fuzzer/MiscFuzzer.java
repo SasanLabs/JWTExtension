@@ -47,9 +47,9 @@ public class MiscFuzzer implements JWTFuzzer {
      */
     private void addingEmptyPayloads(
             LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens) {
-        vulnerabilityTypeAndFuzzedTokens
-                .put(VulnerabilityType.EMPTY_TOKENS, new ArrayList<String>())
-                .add("...");
+        vulnerabilityTypeAndFuzzedTokens.put(
+                VulnerabilityType.EMPTY_TOKENS, new ArrayList<String>());
+        vulnerabilityTypeAndFuzzedTokens.get(VulnerabilityType.EMPTY_TOKENS).add("...");
         vulnerabilityTypeAndFuzzedTokens.get(VulnerabilityType.EMPTY_TOKENS).add(".....");
     }
 

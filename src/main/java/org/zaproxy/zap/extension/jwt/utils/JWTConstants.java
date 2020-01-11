@@ -25,9 +25,7 @@ import java.util.regex.Pattern;
 public interface JWTConstants {
 
     char JWT_TOKEN_PERIOD_CHARACTER = '.';
-
     String JWT_TOKEN_PERIOD_CHARACTER_REGEX = "[" + JWT_TOKEN_PERIOD_CHARACTER + "]";
-
     Pattern JWT_TOKEN_REGEX_PATTERN =
             Pattern.compile(
                     "[a-zA-Z0-9_-]*"
@@ -35,27 +33,16 @@ public interface JWTConstants {
                             + "[a-zA-Z0-9_-]*"
                             + JWT_TOKEN_PERIOD_CHARACTER_REGEX
                             + "[a-zA-Z0-9_-]*$");
-
     String BASE64_PADDING_CHARACTER_REGEX = "[=]";
-
     String[] NONE_ALGORITHM_VARIANTS = {"none", "None", "NONE", "nOnE"};
-
     String JWT_ALGORITHM_KEY_HEADER = "alg";
-
     String JWT_RSA_ALGORITHM_IDENTIFIER = "RS";
-
     String JWT_HMAC_ALGORITHM_IDENTIFIER = "HS";
-
     String JWT_EXP_ALGORITHM_IDENTIFIER = "exp";
-
     String JSON_WEB_KEY_HEADER = "jwk";
-
     String JWK_SET_URL_HEADER = "jku";
-
     String KEY_ID_HEADER = "kid";
-
     String JWT_HEADER_WITH_ALGO_PLACEHOLDER = "{\"typ\":\"JWT\",\"alg\":\"%s\"}";
-
     String[] HEADER_FORMAT_VARIANTS = {
         JWT_HEADER_WITH_ALGO_PLACEHOLDER,
         "{\"alg\":\"%s\",\"typ\":\"JWT\"}",
@@ -65,13 +52,9 @@ public interface JWTConstants {
     };
 
     String HMAC_256 = "HS256";
-
     String HS256_ALGO_JAVA = "HmacSHA256";
-
     String NULL_BYTE_CHARACTER = String.valueOf((char) 0);
-
     String BEARER_TOKEN_REGEX = "(?i)bearer";
-
     String BEARER_TOKEN_KEY = "Bearer";
 
     /** Constants related to Client Side Vulnerabilities in implementation of JWT */

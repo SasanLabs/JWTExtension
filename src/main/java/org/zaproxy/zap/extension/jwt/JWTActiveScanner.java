@@ -84,22 +84,26 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
         switch (this.getAttackStrength()) {
             case LOW:
-                maxRequestCount = 3;
+                maxRequestCount = 8;
                 break;
             case MEDIUM:
-                maxRequestCount = 6;
+                maxRequestCount = 12;
                 break;
             case HIGH:
-                maxRequestCount = 10;
+                maxRequestCount = 25;
                 break;
             case INSANE:
-                maxRequestCount = 24;
+                maxRequestCount = 50;
                 break;
             default:
                 break;
         }
 
-        performAttackClientSideConfigurations(msg, param, jwtTokenBean, value);
+        boolean result = performAttackClientSideConfigurations(msg, param, jwtTokenBean, value);
+        if (result) {
+            return;
+        }
+        this.decreaseRequestCount();
         // add https://nvd.nist.gov/vuln/detail/CVE-2018-0114 for Jose library issues
         // Read vulnerabilires in https://connect2id.com/blog/nimbus-jose-jwt-7-9 and
         // then try to
@@ -109,10 +113,10 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     }
 
     public boolean isStop() {
-        return super.isStop() && (this.maxRequestCount == 0);
+        return super.isStop() && (this.maxRequestCount <= 0);
     }
 
-    private void decreaseRequestCount() {
+    public void decreaseRequestCount() {
         this.maxRequestCount--;
     }
 
@@ -146,21 +150,10 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         // below link
         // https://stackoverflow.com/questions/58044813/how-to-create-a-jwt-in-java-with-the-secret-base64-encoded
         boolean result = new ServerSideAttack(jwtTokenBean, this, param, msg, value).execute();
-        result = this.performBruteForceAttack(jwtTokenBean, msg, param);
+        if (!result) {
+            result = new BruteforceAttack(jwtTokenBean, this, param, msg).execute();
+        }
         return result;
-    }
-
-    /**
-     * performs attack by brute forcing JWT implementation.
-     *
-     * @param jwtTokenBean
-     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
-     */
-    private boolean performBruteForceAttack(
-            JWTTokenBean jwtTokenBean, HttpMessage msg, String param) {
-        BruteforceAttack bruteforceAttack = new BruteforceAttack(jwtTokenBean, this, param, msg);
-        bruteforceAttack.execute();
-        return false;
     }
 
     /**
@@ -177,19 +170,6 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         return false;
     }
 
-    // TODO remove this method and also correcting the alerts in Bruteforce attack.
-    public void bingo(
-            int risk,
-            int confidence,
-            String uri,
-            String param,
-            String attack,
-            String otherInfo,
-            String evidence,
-            HttpMessage msg) {
-        super.bingo(risk, confidence, uri, param, attack, otherInfo, evidence, msg);
-    }
-
     public void bingo(
             int risk,
             int confidence,
@@ -201,7 +181,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             String otherInfo,
             String solution,
             HttpMessage msg) {
-        this.bingo(
+        super.bingo(
                 risk, confidence, name, description, uri, param, attack, otherInfo, solution, msg);
     }
 

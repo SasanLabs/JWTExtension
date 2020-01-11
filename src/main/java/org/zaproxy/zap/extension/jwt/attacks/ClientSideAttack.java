@@ -98,7 +98,8 @@ public class ClientSideAttack {
         }
         while (iterator.hasNext()) {
             String headerValue = (String) iterator.next();
-            if (CookieUtils.hasAttribute(headerValue, param)) {
+            String cookieKey = CookieUtils.getCookieName(headerValue);
+            if (cookieKey != null && cookieKey.equals(this.param)) {
                 paramExists = true;
                 if (!CookieUtils.hasAttribute(headerValue, HTTP_ONLY_COOKIE_ATTRIBUTE)
                         || !CookieUtils.hasAttribute(headerValue, SECURE_COOKIE_ATTRIBUTE)) {
@@ -158,9 +159,7 @@ public class ClientSideAttack {
                 }
             }
         }
-
         // Check if stored in Local Storage and Session Storage
-
         return false;
     }
 }

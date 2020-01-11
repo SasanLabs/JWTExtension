@@ -40,7 +40,7 @@ public class JWTConfiguration {
     // with @thc202 more on this.
     private char[] trustStorePassword;
 
-    private int threadCount;
+    private int threadCount = 2;
 
     private int hmacMaxKeyLength;
 

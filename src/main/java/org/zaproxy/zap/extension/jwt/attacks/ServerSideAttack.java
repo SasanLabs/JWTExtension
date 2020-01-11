@@ -49,7 +49,12 @@ public class ServerSideAttack {
     private List<JWTFuzzer> fuzzers = new ArrayList<JWTFuzzer>();
 
     private void raiseAlert(
-            String messagePrefix, int risk, int confidence, String param, HttpMessage msg) {
+            String messagePrefix,
+            int risk,
+            int confidence,
+            String param,
+            String value,
+            HttpMessage msg) {
         this.jwtActiveScanner.bingo(
                 risk,
                 confidence,
@@ -57,7 +62,7 @@ public class ServerSideAttack {
                 JWTI18n.getMessage(messagePrefix + ".desc"),
                 msg.getRequestHeader().getURI().toString(),
                 param,
-                "",
+                value,
                 JWTI18n.getMessage(messagePrefix + ".refs"),
                 JWTI18n.getMessage(messagePrefix + ".soln"),
                 msg);
@@ -99,9 +104,13 @@ public class ServerSideAttack {
                         vulnerabilityTypeAndFuzzedTokenEntry :
                                 vulnerabilityTypeAndFuzzedTokens.entrySet()) {
                     for (String jwtFuzzedToken : vulnerabilityTypeAndFuzzedTokenEntry.getValue()) {
+                        if (this.jwtActiveScanner.isStop()) {
+                            return result;
+                        }
                         result =
                                 this.jwtActiveScanner.sendFuzzedMsgAndCheckIfAttackSuccessful(
                                         msg, param, jwtFuzzedToken, this.paramValue);
+                        this.jwtActiveScanner.decreaseRequestCount();
                         if (result) {
                             // Now create the alert message
                             this.raiseAlert(
@@ -111,6 +120,7 @@ public class ServerSideAttack {
                                                     .getMessageKey(),
                                     Alert.RISK_HIGH,
                                     Alert.CONFIDENCE_HIGH,
+                                    this.param,
                                     jwtFuzzedToken,
                                     msg);
                             return result;
