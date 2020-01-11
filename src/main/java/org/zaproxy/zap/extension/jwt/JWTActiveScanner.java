@@ -177,6 +177,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         return false;
     }
 
+    // TODO remove this method and also correcting the alerts in Bruteforce attack.
     public void bingo(
             int risk,
             int confidence,
