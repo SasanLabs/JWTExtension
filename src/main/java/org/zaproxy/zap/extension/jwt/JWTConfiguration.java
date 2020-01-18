@@ -65,7 +65,8 @@ public class JWTConfiguration extends AbstractParam {
     private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS =
             PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".numberOfPayloads";
 
-    private static final int DEFAULT_THREAD_COUNT = 2;
+    public static final int DEFAULT_THREAD_COUNT = 2;
+    public static final int DEFAULT_HMAC_MAX_KEY_LENGTH = 52;
 
     private int threadCount;
     private String trustStorePath;
@@ -131,34 +132,37 @@ public class JWTConfiguration extends AbstractParam {
     public void setFileStringPayloadGeneratorUI(
             FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI) {
         this.fileStringPayloadGeneratorUI = fileStringPayloadGeneratorUI;
-        getConfig()
-                .setProperty(
-                        PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE,
-                        fileStringPayloadGeneratorUI.getFile().toUri());
-        getConfig()
-                .setProperty(
-                        PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET,
-                        fileStringPayloadGeneratorUI.getCharset());
-        getConfig()
-                .setProperty(
-                        PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN,
-                        fileStringPayloadGeneratorUI.getCommentToken());
-        getConfig()
-                .setProperty(
-                        PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE,
-                        fileStringPayloadGeneratorUI.isIgnoreFirstLine());
-        getConfig()
-                .setProperty(
-                        PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES,
-                        fileStringPayloadGeneratorUI.isIgnoreEmptyLines());
-        getConfig()
-                .setProperty(
-                        PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS,
-                        fileStringPayloadGeneratorUI.getNumberOfPayloads());
-        getConfig()
-                .setProperty(
-                        PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT,
-                        fileStringPayloadGeneratorUI.getLimit());
+        if (fileStringPayloadGeneratorUI != null
+                && fileStringPayloadGeneratorUI.getFile() != null) {
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE,
+                            fileStringPayloadGeneratorUI.getFile().toUri().toString());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET,
+                            fileStringPayloadGeneratorUI.getCharset().name());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN,
+                            fileStringPayloadGeneratorUI.getCommentToken());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE,
+                            fileStringPayloadGeneratorUI.isIgnoreFirstLine());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES,
+                            fileStringPayloadGeneratorUI.isIgnoreEmptyLines());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS,
+                            fileStringPayloadGeneratorUI.getNumberOfPayloads());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT,
+                            fileStringPayloadGeneratorUI.getLimit());
+        }
     }
 
     public FileStringPayloadGenerator getPayloadGenerator() {
@@ -170,7 +174,7 @@ public class JWTConfiguration extends AbstractParam {
         this.setThreadCount(getInt(PARAM_THREAD_COUNT, DEFAULT_THREAD_COUNT));
         this.setTrustStorePath(getConfig().getString(PARAM_TRUST_STORE_PATH));
         this.setTrustStorePassword(getConfig().getString(PARAM_TRUST_STORE_PASSWORD));
-        this.setHmacMaxKeyLength(getInt(PARAM_HMAC_MAX_KEY_LENGTH, 0));
+        this.setHmacMaxKeyLength(getInt(PARAM_HMAC_MAX_KEY_LENGTH, DEFAULT_HMAC_MAX_KEY_LENGTH));
 
         String fileUri = getConfig().getString(PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE);
         if (fileUri != null) {

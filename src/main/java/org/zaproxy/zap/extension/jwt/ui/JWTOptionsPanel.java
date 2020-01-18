@@ -54,23 +54,17 @@ import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTI18n;
 
 public class JWTOptionsPanel extends AbstractParamPanel {
-    public static final int DEFAULT_THREAD_COUNT = 2;
-
-    public static final int DEFAULT_HMAC_MAX_KEY_LENGTH = 52;
-
-    private String trustStorePath;
+    private static final long serialVersionUID = 1L;
 
     /**
      * Thread count is used by BruteForce Attack. Please go through {@link
      * org.zaproxy.zap.extension.jwt.attacks.BruteforceAttack} for more information
      */
-    private int threadCount = DEFAULT_THREAD_COUNT;
+    private int threadCount;
 
     private int hmacMaxKeyLength;
+    private String trustStorePath;
 
-    private static final long serialVersionUID = 1L;
-
-    // private JWTConfiguration jwtConfiguration;
     private JScrollPane settingsScrollPane;
     private JPanel footerPanel;
     private JPanel settingsPanel;
@@ -81,14 +75,11 @@ public class JWTOptionsPanel extends AbstractParamPanel {
     private String trustStorePassword;
     private JButton trustStoreFileChooserButton;
     private JTextField trustStoreFileChooserTextField;
-
-    private PayloadGeneratorsContainer payloadGeneratorsContainer;
-    private FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler;
     private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
+    private JButton showFuzzerDialogButton;
 
     public JWTOptionsPanel() {
         super();
-        // jwtConfiguration = JWTConfiguration.getInstance();
         this.setName(JWTI18n.getMessage("jwt.toolmenu.settings"));
         this.setBorder(new EmptyBorder(4, 4, 4, 4));
         this.setLayout(new BorderLayout());
@@ -113,11 +104,6 @@ public class JWTOptionsPanel extends AbstractParamPanel {
     }
 
     private void init() {
-        payloadGeneratorUIHandler = new FileStringPayloadGeneratorUIHandler();
-        payloadGeneratorsContainer =
-                new PayloadGeneratorsContainer(
-                        Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
-
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
         gridBagConstraints.fill = GridBagConstraints.NONE;
         gridBagConstraints.anchor = GridBagConstraints.FIRST_LINE_START;
@@ -128,50 +114,40 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         this.rsaSettingsSection(gridBagConstraints);
 
         gridBagConstraints.gridy++;
-        JButton saveButton = new JButton();
-        saveButton.setText(JWTI18n.getMessage("jwt.settings.button.save"));
-        saveButton.addActionListener(
-                new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        //                        jwtConfiguration.setThreadCount(threadCount);
-                        //
-                        // jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
-                        //
-                        // jwtConfiguration.setTrustStorePath(trustStorePath);
-                        //
-                        // jwtConfiguration.setTrustStorePassword(trustStorePassword);
-                        fileStringPayloadGeneratorUI =
-                                (FileStringPayloadGeneratorUI)
-                                        payloadGeneratorsContainer
-                                                .getPanel(payloadGeneratorUIHandler.getName())
-                                                .getPayloadGeneratorUI();
-                    }
-                });
+        footerPanel.add(getResetButton(), gridBagConstraints);
+    }
+
+    private JButton getResetButton() {
         JButton resetButton = new JButton();
         resetButton.setText(JWTI18n.getMessage("jwt.settings.button.reset"));
         resetButton.addActionListener(
                 new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        //
-                        // jwtConfiguration.setThreadCount(DEFAULT_THREAD_COUNT);
-                        //
-                        // jwtConfiguration.setHmacMaxKeyLength(DEFAULT_HMAC_MAX_KEY_LENGTH);
-                        //                        jwtConfiguration.setTrustStorePath("");
-                        threadCount = DEFAULT_THREAD_COUNT;
-                        hmacMaxKeyLength = DEFAULT_HMAC_MAX_KEY_LENGTH;
-                        threadCountTextField.setText("");
-                        maxHmacKeyLengthTextField.setText("");
-                        payloadGeneratorsContainer
-                                .getPanel(payloadGeneratorUIHandler.getName())
-                                .clear();
-                        // jwtConfiguration.setFileStringPayloadGeneratorUI(null);
-                        trustStorePassword = null;
+                        resetOptionsPanel();
                     }
                 });
-        footerPanel.add(saveButton, gridBagConstraints);
-        footerPanel.add(resetButton, gridBagConstraints);
+        return resetButton;
+    }
+
+    /** Resets entire panel to default values. */
+    private void resetOptionsPanel() {
+        threadCount = JWTConfiguration.DEFAULT_THREAD_COUNT;
+        hmacMaxKeyLength = JWTConfiguration.DEFAULT_HMAC_MAX_KEY_LENGTH;
+        threadCountTextField.setText("" + threadCount);
+        maxHmacKeyLengthTextField.setText("" + hmacMaxKeyLength);
+        trustStorePasswordField.setText("");
+        trustStoreFileChooserTextField.setText("");
+        showFuzzerDialogButton.setEnabled(true);
+        fileStringPayloadGeneratorUI = null;
+        trustStorePassword = null;
+    }
+
+    private void populateOptionsPanel() {
+        threadCountTextField.setText("" + threadCount);
+        maxHmacKeyLengthTextField.setText("" + hmacMaxKeyLength);
+        trustStoreFileChooserTextField.setText(trustStorePath);
+        trustStorePasswordField.setText(trustStorePassword);
     }
 
     private void trustStoreFileChooserButton() {
@@ -261,6 +237,17 @@ public class JWTOptionsPanel extends AbstractParamPanel {
     }
 
     private void showAddPayloadDialog() {
+        FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler =
+                new FileStringPayloadGeneratorUIHandler();
+        PayloadGeneratorsContainer payloadGeneratorsContainer =
+                new PayloadGeneratorsContainer(
+                        Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
+        if (fileStringPayloadGeneratorUI != null) {
+            ((FileStringPayloadGeneratorUIPanel)
+                            payloadGeneratorsContainer.getPanel(
+                                    payloadGeneratorUIHandler.getName()))
+                    .populateFileStringPayloadGeneratorUIPanel(fileStringPayloadGeneratorUI);
+        }
         AddPayloadDialog jwtAddPayloadDialog =
                 new AddPayloadDialog(
                         View.getSingleton().getOptionsDialog(null),
@@ -269,7 +256,18 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                     private static final long serialVersionUID = 1L;
 
                     @Override
-                    protected void clearFields() {}
+                    protected void performAction() {
+                        super.performAction();
+                        fileStringPayloadGeneratorUI =
+                                (FileStringPayloadGeneratorUI) getPayloadGeneratorUI();
+                        showFuzzerDialogButton.setEnabled(true);
+                    }
+
+                    @Override
+                    protected void clearFields() {
+                        super.clearFields();
+                        showFuzzerDialogButton.setEnabled(true);
+                    }
                 };
         jwtAddPayloadDialog.pack();
         jwtAddPayloadDialog.setVisible(true);
@@ -296,7 +294,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                                 threadCount =
                                         Integer.parseInt(threadCountTextField.getText().trim());
                             } else {
-                                threadCount = DEFAULT_THREAD_COUNT;
+                                threadCount = JWTConfiguration.DEFAULT_THREAD_COUNT;
                             }
                         } catch (NumberFormatException ex) {
                             // TODO need to handle exception
@@ -328,7 +326,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                                         Integer.parseInt(
                                                 maxHmacKeyLengthTextField.getText().trim());
                             } else {
-                                hmacMaxKeyLength = DEFAULT_HMAC_MAX_KEY_LENGTH;
+                                hmacMaxKeyLength = JWTConfiguration.DEFAULT_HMAC_MAX_KEY_LENGTH;
                             }
                         } catch (NumberFormatException ex) {
                             // TODO need to handle exception
@@ -349,12 +347,13 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         settingsPanel.add(lblBruteForceKeyAttribute, gridBagConstraints);
         gridBagConstraints.gridx++;
 
-        JButton showFuzzerDialogButton =
+        showFuzzerDialogButton =
                 new JButton(JWTI18n.getMessage("jwt.settings.hmac.fuzzer.payload.add.button"));
         showFuzzerDialogButton.addActionListener(
                 new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
+                        showFuzzerDialogButton.setEnabled(false);
                         showAddPayloadDialog();
                     }
                 });
@@ -367,6 +366,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
 
     @Override
     public void initParam(Object optionParams) {
+        this.resetOptionsPanel();
         JWTConfiguration jwtConfiguration =
                 ((OptionsParam) optionParams).getParamSet(JWTConfiguration.class);
         trustStorePath = jwtConfiguration.getTrustStorePath();
@@ -374,13 +374,9 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         threadCount = jwtConfiguration.getThreadCount();
         trustStorePassword = jwtConfiguration.getTrustStorePassword();
         if (jwtConfiguration.getFileStringPayloadGeneratorUI() != null) {
-            ((FileStringPayloadGeneratorUIPanel)
-                            payloadGeneratorsContainer.getPanel(
-                                    payloadGeneratorUIHandler.getName()))
-                    .getPayloadGeneratorUI()
-                    .populateFileStringPayloadGeneratorUI(
-                            jwtConfiguration.getFileStringPayloadGeneratorUI());
+            fileStringPayloadGeneratorUI = jwtConfiguration.getFileStringPayloadGeneratorUI();
         }
+        this.populateOptionsPanel();
     }
 
     @Override
