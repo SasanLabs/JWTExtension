@@ -179,7 +179,8 @@ public class SignatureFuzzer implements JWTFuzzer {
                 trustStorePath = System.getProperty("javax.net.ssl.trustStore");
             }
             if (Objects.nonNull(trustStorePath)) {
-                char[] password = JWTConfiguration.getInstance().getTrustStorePassword();
+                char[] password =
+                        JWTConfiguration.getInstance().getTrustStorePassword().toCharArray();
                 keyStore.load(new FileInputStream(trustStorePath), password);
 
                 JWKSet jwkSet = JWKSet.load(keyStore, null);

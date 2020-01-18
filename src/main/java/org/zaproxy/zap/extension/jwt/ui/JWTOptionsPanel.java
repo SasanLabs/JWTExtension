@@ -3,7 +3,7 @@
  *
  * ZAP is an HTTP/HTTPS proxy for assessing web application security.
  *
- * Copyright 2019 The ZAP Development Team
+ * Copyright 2020 The ZAP Development Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,35 +28,32 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.EtchedBorder;
 import javax.swing.filechooser.FileFilter;
+import org.parosproxy.paros.model.OptionsParam;
+import org.parosproxy.paros.view.AbstractParamPanel;
+import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.extension.fuzz.impl.AddPayloadDialog;
 import org.zaproxy.zap.extension.fuzz.impl.PayloadGeneratorsContainer;
 import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler;
+import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUI;
+import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUIPanel;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTI18n;
 
-/**
- * Used to get the input from user regarding truststore path or Api for adding ZAP certificate to
- * default truststore.
- *
- * <p>TODO need to think more on how to handle cases of HMAC implementations for JWT.
- *
- * @author KSASAN preetkaran20@gmail.com
- */
-public class JWTSettingsUI extends JFrame {
-
+public class JWTOptionsPanel extends AbstractParamPanel {
     public static final int DEFAULT_THREAD_COUNT = 2;
 
     public static final int DEFAULT_HMAC_MAX_KEY_LENGTH = 52;
@@ -73,7 +70,7 @@ public class JWTSettingsUI extends JFrame {
 
     private static final long serialVersionUID = 1L;
 
-    private JWTConfiguration jwtConfiguration;
+    // private JWTConfiguration jwtConfiguration;
     private JScrollPane settingsScrollPane;
     private JPanel footerPanel;
     private JPanel settingsPanel;
@@ -81,36 +78,33 @@ public class JWTSettingsUI extends JFrame {
     private JTextField maxHmacKeyLengthTextField;
     private JFileChooser trustStoreFileChooser;
     private JPasswordField trustStorePasswordField;
-    private char[] trustStorePassword;
+    private String trustStorePassword;
     private JButton trustStoreFileChooserButton;
     private JTextField trustStoreFileChooserTextField;
 
     private PayloadGeneratorsContainer payloadGeneratorsContainer;
     private FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler;
+    private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
 
-    public JWTSettingsUI() {
-        jwtConfiguration = JWTConfiguration.getInstance();
-        setTitle(JWTI18n.getMessage("jwt.toolmenu.settings"));
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(700, 400);
-        setLocationRelativeTo(null);
-        JPanel contentPane = new JPanel();
-        contentPane.setBorder(new EmptyBorder(4, 4, 4, 4));
-        contentPane.setLayout(new BorderLayout(1, 1));
-        setContentPane(contentPane);
+    public JWTOptionsPanel() {
+        super();
+        // jwtConfiguration = JWTConfiguration.getInstance();
+        this.setName(JWTI18n.getMessage("jwt.toolmenu.settings"));
+        this.setBorder(new EmptyBorder(4, 4, 4, 4));
+        this.setLayout(new BorderLayout());
 
-        JLabel lblHeaderlabel = new JLabel(JWTI18n.getMessage("jwt.settings.header"));
-        contentPane.add(lblHeaderlabel, BorderLayout.NORTH);
-
-        settingsScrollPane = new JScrollPane();
-        contentPane.add(settingsScrollPane, BorderLayout.CENTER);
+        settingsScrollPane =
+                new JScrollPane(
+                        ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+                        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        this.add(settingsScrollPane, BorderLayout.NORTH);
+        settingsScrollPane.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
         settingsPanel = new JPanel();
         settingsScrollPane.setViewportView(settingsPanel);
         GridBagLayout gridBagLayout = new GridBagLayout();
         settingsPanel.setLayout(gridBagLayout);
-
         footerPanel = new JPanel();
-        contentPane.add(footerPanel, BorderLayout.SOUTH);
+        this.add(footerPanel, BorderLayout.SOUTH);
         footerPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 4, 4));
 
         this.addFileChooserTextField();
@@ -125,8 +119,8 @@ public class JWTSettingsUI extends JFrame {
                         Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
 
         GridBagConstraints gridBagConstraints = new GridBagConstraints();
-        gridBagConstraints.anchor = GridBagConstraints.WEST;
         gridBagConstraints.fill = GridBagConstraints.NONE;
+        gridBagConstraints.anchor = GridBagConstraints.FIRST_LINE_START;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.gridx = 0;
 
@@ -140,15 +134,18 @@ public class JWTSettingsUI extends JFrame {
                 new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        jwtConfiguration.setThreadCount(threadCount);
-                        jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
-                        jwtConfiguration.setTrustStorePath(trustStorePath);
-                        jwtConfiguration.setTrustStorePassword(trustStorePassword);
-                        jwtConfiguration.setPayloadGenerator(
-                                payloadGeneratorsContainer
-                                        .getPanel(payloadGeneratorUIHandler.getName())
-                                        .getPayloadGeneratorUI()
-                                        .getPayloadGenerator());
+                        //                        jwtConfiguration.setThreadCount(threadCount);
+                        //
+                        // jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
+                        //
+                        // jwtConfiguration.setTrustStorePath(trustStorePath);
+                        //
+                        // jwtConfiguration.setTrustStorePassword(trustStorePassword);
+                        fileStringPayloadGeneratorUI =
+                                (FileStringPayloadGeneratorUI)
+                                        payloadGeneratorsContainer
+                                                .getPanel(payloadGeneratorUIHandler.getName())
+                                                .getPayloadGeneratorUI();
                     }
                 });
         JButton resetButton = new JButton();
@@ -157,15 +154,19 @@ public class JWTSettingsUI extends JFrame {
                 new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        jwtConfiguration.setThreadCount(DEFAULT_THREAD_COUNT);
-                        jwtConfiguration.setHmacMaxKeyLength(DEFAULT_HMAC_MAX_KEY_LENGTH);
-                        jwtConfiguration.setTrustStorePath("");
+                        //
+                        // jwtConfiguration.setThreadCount(DEFAULT_THREAD_COUNT);
+                        //
+                        // jwtConfiguration.setHmacMaxKeyLength(DEFAULT_HMAC_MAX_KEY_LENGTH);
+                        //                        jwtConfiguration.setTrustStorePath("");
+                        threadCount = DEFAULT_THREAD_COUNT;
+                        hmacMaxKeyLength = DEFAULT_HMAC_MAX_KEY_LENGTH;
                         threadCountTextField.setText("");
                         maxHmacKeyLengthTextField.setText("");
                         payloadGeneratorsContainer
                                 .getPanel(payloadGeneratorUIHandler.getName())
                                 .clear();
-                        jwtConfiguration.setPayloadGenerator(null);
+                        // jwtConfiguration.setFileStringPayloadGeneratorUI(null);
                         trustStorePassword = null;
                     }
                 });
@@ -217,7 +218,7 @@ public class JWTSettingsUI extends JFrame {
     private void addFileChooserTextField() {
         trustStoreFileChooserTextField = new JTextField();
         trustStoreFileChooserTextField.setEditable(false);
-        trustStoreFileChooserTextField.setColumns(25);
+        trustStoreFileChooserTextField.setColumns(15);
     }
 
     private void rsaSettingsSection(GridBagConstraints gridBagConstraints) {
@@ -242,13 +243,13 @@ public class JWTSettingsUI extends JFrame {
 
         gridBagConstraints.gridx++;
         trustStorePasswordField = new JPasswordField();
-        trustStorePasswordField.setColumns(25);
+        trustStorePasswordField.setColumns(15);
         trustStorePasswordField.addFocusListener(
                 new FocusListener() {
                     @Override
                     public void focusLost(FocusEvent e) {
                         if (trustStorePasswordField.getPassword() != null) {
-                            trustStorePassword = trustStorePasswordField.getPassword();
+                            trustStorePassword = new String(trustStorePasswordField.getPassword());
                         }
                     }
 
@@ -260,49 +261,18 @@ public class JWTSettingsUI extends JFrame {
     }
 
     private void showAddPayloadDialog() {
-        // TODO extending AddPayloadDialog to add the reset button option as shown below.
-        // TODO exposing selectedPanel so that other things can be made easy.
-        AddPayloadDialog addPayloadDialog =
-                new AddPayloadDialog(this, payloadGeneratorsContainer, null) {
-
-                    protected void initView() {
-                        JPanel buttonsPanel = new JPanel();
-                        buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.LINE_AXIS));
-                        buttonsPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-                        // buttonsPanel.add(super.getHelpButton());
-                        // buttonsPanel.add(Box.createHorizontalGlue());
-                        // buttonsPanel.add(getCancelButton());
-                        // buttonsPanel.add(Box.createRigidArea(new Dimension(5, 0)));
-                        // buttonsPanel.add(getConfirmButton());
-                        JButton button = new JButton();
-                        button.addActionListener(
-                                new ActionListener() {
-
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-
-                                        payloadGeneratorsContainer
-                                                .getPanel(payloadGeneratorUIHandler.getName())
-                                                .clear();
-                                    }
-                                });
-                        buttonsPanel.add(button);
-                        JPanel panel = new JPanel(new BorderLayout());
-
-                        panel.add(getFieldsPanel(), BorderLayout.CENTER);
-                        panel.add(buttonsPanel, BorderLayout.PAGE_END);
-
-                        this.setContentPane(panel);
-                    }
-
+        AddPayloadDialog jwtAddPayloadDialog =
+                new AddPayloadDialog(
+                        View.getSingleton().getOptionsDialog(null),
+                        payloadGeneratorsContainer,
+                        null) {
                     private static final long serialVersionUID = 1L;
 
                     @Override
                     protected void clearFields() {}
                 };
-        addPayloadDialog.pack();
-        addPayloadDialog.setVisible(true);
-        /** Look at the file {@code MessageLocationPayloadsPanel} */
+        jwtAddPayloadDialog.pack();
+        jwtAddPayloadDialog.setVisible(true);
     }
 
     private void hmacSettingsSection(GridBagConstraints gridBagConstraints) {
@@ -393,5 +363,47 @@ public class JWTSettingsUI extends JFrame {
 
         gridBagConstraints.gridy++;
         gridBagConstraints.gridx = 0;
+    }
+
+    @Override
+    public void initParam(Object optionParams) {
+        JWTConfiguration jwtConfiguration =
+                ((OptionsParam) optionParams).getParamSet(JWTConfiguration.class);
+        trustStorePath = jwtConfiguration.getTrustStorePath();
+        hmacMaxKeyLength = jwtConfiguration.getHmacMaxKeyLength();
+        threadCount = jwtConfiguration.getThreadCount();
+        trustStorePassword = jwtConfiguration.getTrustStorePassword();
+        if (jwtConfiguration.getFileStringPayloadGeneratorUI() != null) {
+            ((FileStringPayloadGeneratorUIPanel)
+                            payloadGeneratorsContainer.getPanel(
+                                    payloadGeneratorUIHandler.getName()))
+                    .getPayloadGeneratorUI()
+                    .populateFileStringPayloadGeneratorUI(
+                            jwtConfiguration.getFileStringPayloadGeneratorUI());
+        }
+    }
+
+    @Override
+    public void validateParam(Object optionParams) throws Exception {}
+
+    @Override
+    public void saveParam(Object optionParams) throws Exception {
+        JWTConfiguration jwtConfiguration =
+                ((OptionsParam) optionParams).getParamSet(JWTConfiguration.class);
+        jwtConfiguration.setTrustStorePath(trustStorePath);
+        jwtConfiguration.setHmacMaxKeyLength(hmacMaxKeyLength);
+        jwtConfiguration.setThreadCount(threadCount);
+        jwtConfiguration.setFileStringPayloadGeneratorUI(fileStringPayloadGeneratorUI);
+        jwtConfiguration.setTrustStorePassword(trustStorePassword);
+    }
+
+    @Override
+    public String getHelpIndex() {
+        return "addon.fuzzer.options";
+    }
+
+    public static interface CustomFileFuzzerAddedListener {
+
+        void added(Path file);
     }
 }

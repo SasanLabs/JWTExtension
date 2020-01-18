@@ -19,32 +19,59 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
-import org.zaproxy.zap.extension.fuzz.payloads.Payload;
-import org.zaproxy.zap.extension.fuzz.payloads.generator.PayloadGenerator;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.apache.log4j.Logger;
+import org.parosproxy.paros.common.AbstractParam;
+import org.zaproxy.zap.extension.fuzz.payloads.generator.FileStringPayloadGenerator;
+import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUI;
 
 /**
  * This class holds UI configuration and used by JWT Active Scanner for performing JWT based
  * attacks.
  *
- * <p>TODO my thinking now configurations needed are 1. for JWK based on URL 2. for Public
- * Key/Private Key path for fuzzing signature if required 3. HMAC secret key for fuzzing signature
- * if required 4. only public key path for mixed algorithm vulnerability
- *
  * @author preetkaran20@gmail.com KSASAN
  */
-public class JWTConfiguration {
+public class JWTConfiguration extends AbstractParam {
 
+    protected static final Logger LOGGER = Logger.getLogger(JWTExtension.class);
+
+    /** The base configuration key for all JWT configurations. */
+    private static final String PARAM_BASE_KEY = "jwt";
+
+    private static final String PARAM_THREAD_COUNT = PARAM_BASE_KEY + ".threadCount";
+    private static final String PARAM_TRUST_STORE_PATH = PARAM_BASE_KEY + ".trustStorePath";
+    private static final String PARAM_TRUST_STORE_PASSWORD = PARAM_BASE_KEY + ".trustStorePassword";
+    private static final String PARAM_HMAC_MAX_KEY_LENGTH = PARAM_BASE_KEY + ".hmacMaxKeyLength";
+
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY =
+            PARAM_BASE_KEY + ".fileStringPayloadGeneratorUI";
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE =
+            PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".file";
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET =
+            PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".charset";
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT =
+            PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".limit";
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN =
+            PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".commentToken";
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES =
+            PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".ignoreTrimmedEmptyLines";
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE =
+            PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".ignoreFirstLine";
+    private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS =
+            PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".numberOfPayloads";
+
+    private static final int DEFAULT_THREAD_COUNT = 2;
+
+    private int threadCount;
     private String trustStorePath;
-
-    // TODO instead of storing password we will read the JKS and load it inmemory. Need to check
-    // with @thc202 more on this.
-    private char[] trustStorePassword;
-
-    private int threadCount = 2;
-
+    private String trustStorePassword;
     private int hmacMaxKeyLength;
-
-    private PayloadGenerator<? extends Payload> payloadGenerator;
+    private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
 
     private static volatile JWTConfiguration jwtConfiguration;
 
@@ -67,6 +94,7 @@ public class JWTConfiguration {
 
     public void setTrustStorePath(String trustStorePath) {
         this.trustStorePath = trustStorePath;
+        this.getConfig().setProperty(PARAM_TRUST_STORE_PATH, trustStorePath);
     }
 
     public int getThreadCount() {
@@ -75,6 +103,7 @@ public class JWTConfiguration {
 
     public void setThreadCount(int threadCount) {
         this.threadCount = threadCount;
+        this.getConfig().setProperty(PARAM_THREAD_COUNT, threadCount);
     }
 
     public int getHmacMaxKeyLength() {
@@ -83,21 +112,97 @@ public class JWTConfiguration {
 
     public void setHmacMaxKeyLength(int hmacMaxKeyLength) {
         this.hmacMaxKeyLength = hmacMaxKeyLength;
+        this.getConfig().setProperty(PARAM_HMAC_MAX_KEY_LENGTH, hmacMaxKeyLength);
     }
 
-    public char[] getTrustStorePassword() {
+    public String getTrustStorePassword() {
         return trustStorePassword;
     }
 
-    public void setTrustStorePassword(char[] trustStorePassword) {
+    public void setTrustStorePassword(String trustStorePassword) {
         this.trustStorePassword = trustStorePassword;
+        this.getConfig().setProperty(PARAM_TRUST_STORE_PASSWORD, trustStorePassword);
     }
 
-    public PayloadGenerator<? extends Payload> getPayloadGenerator() {
-        return payloadGenerator;
+    public FileStringPayloadGeneratorUI getFileStringPayloadGeneratorUI() {
+        return fileStringPayloadGeneratorUI;
     }
 
-    public void setPayloadGenerator(PayloadGenerator<? extends Payload> payloadGenerator) {
-        this.payloadGenerator = payloadGenerator;
+    public void setFileStringPayloadGeneratorUI(
+            FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI) {
+        this.fileStringPayloadGeneratorUI = fileStringPayloadGeneratorUI;
+        getConfig()
+                .setProperty(
+                        PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE,
+                        fileStringPayloadGeneratorUI.getFile().toUri());
+        getConfig()
+                .setProperty(
+                        PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET,
+                        fileStringPayloadGeneratorUI.getCharset());
+        getConfig()
+                .setProperty(
+                        PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN,
+                        fileStringPayloadGeneratorUI.getCommentToken());
+        getConfig()
+                .setProperty(
+                        PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE,
+                        fileStringPayloadGeneratorUI.isIgnoreFirstLine());
+        getConfig()
+                .setProperty(
+                        PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES,
+                        fileStringPayloadGeneratorUI.isIgnoreEmptyLines());
+        getConfig()
+                .setProperty(
+                        PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS,
+                        fileStringPayloadGeneratorUI.getNumberOfPayloads());
+        getConfig()
+                .setProperty(
+                        PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT,
+                        fileStringPayloadGeneratorUI.getLimit());
+    }
+
+    public FileStringPayloadGenerator getPayloadGenerator() {
+        return this.fileStringPayloadGeneratorUI.getPayloadGenerator();
+    }
+
+    @Override
+    protected void parse() {
+        this.setThreadCount(getInt(PARAM_THREAD_COUNT, DEFAULT_THREAD_COUNT));
+        this.setTrustStorePath(getConfig().getString(PARAM_TRUST_STORE_PATH));
+        this.setTrustStorePassword(getConfig().getString(PARAM_TRUST_STORE_PASSWORD));
+        this.setHmacMaxKeyLength(getInt(PARAM_HMAC_MAX_KEY_LENGTH, 0));
+
+        String fileUri = getConfig().getString(PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE);
+        if (fileUri != null) {
+            try {
+                Path file = Paths.get(new URI(fileUri));
+                String charSetName = getConfig().getString(PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET);
+                Charset charset =
+                        charSetName == null ? StandardCharsets.UTF_8 : Charset.forName(charSetName);
+                String commentToken =
+                        getConfig().getString(PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN);
+                boolean isIgnoreFirstLine =
+                        getConfig().getBoolean(PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE);
+                boolean isTrimmedEmptyLine =
+                        getConfig()
+                                .getBoolean(
+                                        PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES);
+                long numberOfPayload =
+                        getConfig().getInt(PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS);
+                long limit = getConfig().getInt(PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT);
+                FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI =
+                        new FileStringPayloadGeneratorUI(
+                                file,
+                                charset,
+                                limit,
+                                commentToken,
+                                isTrimmedEmptyLine,
+                                isIgnoreFirstLine,
+                                numberOfPayload);
+                this.setFileStringPayloadGeneratorUI(fileStringPayloadGeneratorUI);
+            } catch (URISyntaxException e) {
+                LOGGER.error("Error occurred while parsing config ", e);
+            }
+        }
     }
 }
