@@ -19,24 +19,19 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
-import java.awt.Component;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.net.MalformedURLException;
 import java.net.URL;
-import javax.swing.JMenuItem;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
-import org.zaproxy.zap.extension.ExtensionPopupMenu;
-import org.zaproxy.zap.extension.jwt.ui.JWTSettingsUI;
-import org.zaproxy.zap.view.popup.ExtensionPopupMenuMessageContainer;
+import org.zaproxy.zap.extension.jwt.ui.JWTOptionsPanel;
 
 /** @author KSASAN preetkaran20@gmail.com */
 public class JWTExtension extends ExtensionAdaptor {
 
     protected static final Logger LOGGER = Logger.getLogger(JWTExtension.class);
+    private JWTConfiguration jwtConfiguration = null;
 
     @Override
     public URL getURL() {
@@ -60,49 +55,18 @@ public class JWTExtension extends ExtensionAdaptor {
         JWTI18n.init();
         try {
             LOGGER.error("JWT Extension");
-            // jwtMenu is not working for now.
-            ExtensionPopupMenu jwtMenu =
-                    new ExtensionPopupMenuMessageContainer(
-                            JWTI18n.getMessage("jwt.popup.mainmenu")) {
-                        private static final long serialVersionUID = 1321249475392775487L;
-
-                        @Override
-                        public boolean isEnableForComponent(Component invoker) {
-                            return true;
-                        }
-                    };
-            jwtMenu.addActionListener(
-                    new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            LOGGER.error("JWT Extension Menu item");
-                            // read the token and parse it.
-                            // understand it and then perform active scan kind of thing.
-
-                            // Test Case 1. Check cookies used for Storing are httponly and secure.
-                            // Test Case 2.
-                            // https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html
-                            // Try using bruteforce too.
-                            // https://medium.com/@codebyamir/the-java-developers-guide-to-ssl-certificates-b78142b3a0fc
-                        }
-                    });
-            extensionHook.getHookMenu().addPopupMenuItem(jwtMenu);
-
-            JMenuItem jwtActiveEditorMenu =
-                    new JMenuItem(JWTI18n.getMessage("jwt.toolmenu.settings"));
-            JWTSettingsUI jwtSettingsUI = new JWTSettingsUI();
-            jwtActiveEditorMenu.addActionListener(
-                    new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            LOGGER.info("JWT Settings item");
-                            jwtSettingsUI.setVisible(true);
-                        }
-                    });
-            extensionHook.getHookMenu().addToolsMenuItem(jwtActiveEditorMenu);
+            extensionHook.addOptionsParamSet(getJWTConfiguration());
+            extensionHook.getHookView().addOptionPanel(new JWTOptionsPanel());
         } catch (Exception e) {
             LOGGER.error("JWT Extension can't be loaded. Configuration not found or invalid", e);
         }
+    }
+
+    private JWTConfiguration getJWTConfiguration() {
+        if (jwtConfiguration == null) {
+            jwtConfiguration = JWTConfiguration.getInstance();
+        }
+        return jwtConfiguration;
     }
 
     @Override
