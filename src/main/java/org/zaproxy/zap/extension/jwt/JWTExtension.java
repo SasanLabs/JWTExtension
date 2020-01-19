@@ -31,7 +31,6 @@ import org.zaproxy.zap.extension.jwt.ui.JWTOptionsPanel;
 public class JWTExtension extends ExtensionAdaptor {
 
     protected static final Logger LOGGER = Logger.getLogger(JWTExtension.class);
-    private JWTConfiguration jwtConfiguration = null;
 
     @Override
     public URL getURL() {
@@ -63,10 +62,7 @@ public class JWTExtension extends ExtensionAdaptor {
     }
 
     private JWTConfiguration getJWTConfiguration() {
-        if (jwtConfiguration == null) {
-            jwtConfiguration = JWTConfiguration.getInstance();
-        }
-        return jwtConfiguration;
+        return JWTConfiguration.getInstance();
     }
 
     @Override

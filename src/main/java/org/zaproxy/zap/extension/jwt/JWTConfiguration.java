@@ -47,6 +47,8 @@ public class JWTConfiguration extends AbstractParam {
     private static final String PARAM_TRUST_STORE_PATH = PARAM_BASE_KEY + ".trustStorePath";
     private static final String PARAM_TRUST_STORE_PASSWORD = PARAM_BASE_KEY + ".trustStorePassword";
     private static final String PARAM_HMAC_MAX_KEY_LENGTH = PARAM_BASE_KEY + ".hmacMaxKeyLength";
+    private static final String PARAM_IGNORE_CLIENT_CONFIGURATION_SCAN =
+            PARAM_BASE_KEY + ".ignoreClientConfigurationScan";
 
     private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY =
             PARAM_BASE_KEY + ".fileStringPayloadGeneratorUI";
@@ -72,6 +74,7 @@ public class JWTConfiguration extends AbstractParam {
     private String trustStorePath;
     private String trustStorePassword;
     private int hmacMaxKeyLength;
+    private boolean ignoreClientConfigurationScan;
     private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
 
     private static volatile JWTConfiguration jwtConfiguration;
@@ -125,6 +128,16 @@ public class JWTConfiguration extends AbstractParam {
         this.getConfig().setProperty(PARAM_TRUST_STORE_PASSWORD, trustStorePassword);
     }
 
+    public boolean isIgnoreClientConfigurationScan() {
+        return ignoreClientConfigurationScan;
+    }
+
+    public void setIgnoreClientConfigurationScan(boolean ignoreClientConfigurationScan) {
+        this.ignoreClientConfigurationScan = ignoreClientConfigurationScan;
+        this.getConfig()
+                .setProperty(PARAM_IGNORE_CLIENT_CONFIGURATION_SCAN, ignoreClientConfigurationScan);
+    }
+
     public FileStringPayloadGeneratorUI getFileStringPayloadGeneratorUI() {
         return fileStringPayloadGeneratorUI;
     }
@@ -175,7 +188,8 @@ public class JWTConfiguration extends AbstractParam {
         this.setTrustStorePath(getConfig().getString(PARAM_TRUST_STORE_PATH));
         this.setTrustStorePassword(getConfig().getString(PARAM_TRUST_STORE_PASSWORD));
         this.setHmacMaxKeyLength(getInt(PARAM_HMAC_MAX_KEY_LENGTH, DEFAULT_HMAC_MAX_KEY_LENGTH));
-
+        this.setIgnoreClientConfigurationScan(
+                getBoolean(PARAM_IGNORE_CLIENT_CONFIGURATION_SCAN, false));
         String fileUri = getConfig().getString(PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE);
         if (fileUri != null) {
             try {

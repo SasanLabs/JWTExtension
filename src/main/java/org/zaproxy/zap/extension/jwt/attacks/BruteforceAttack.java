@@ -124,13 +124,13 @@ public class BruteforceAttack {
         this.jwtActiveScanner.bingo(
                 risk,
                 confidence,
-                JWTI18n.getMessage(messagePrefix + ".name"),
-                JWTI18n.getMessage(messagePrefix + ".desc"),
+                JWTI18n.getMessage(messagePrefix + "name"),
+                JWTI18n.getMessage(messagePrefix + "desc"),
                 msg.getRequestHeader().getURI().toString(),
                 param,
                 value,
-                JWTI18n.getMessage(messagePrefix + ".refs"),
-                JWTI18n.getMessage(messagePrefix + ".soln"),
+                JWTI18n.getMessage(messagePrefix + "refs"),
+                JWTI18n.getMessage(messagePrefix + "soln"),
                 msg);
     }
 
