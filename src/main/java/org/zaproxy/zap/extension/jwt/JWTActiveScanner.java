@@ -42,7 +42,6 @@ import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
  *       understanding
  *   <li>https://github.com/ticarpi/jwt_tool/blob/master/jwt_tool.py -> Fuzzer Logic
  *   <li>https://github.com/andresriancho/jwt-fuzzer -> Fuzzer Logic
- *   <li>https://github.com/brendan-rius/c-jwt-cracker -> About the BruteForce Attack
  * </ol>
  *
  * @author KSASAN preetkaran20@gmail.com
@@ -105,11 +104,6 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             }
             this.decreaseRequestCount();
         }
-        // add https://nvd.nist.gov/vuln/detail/CVE-2018-0114 for Jose library issues
-        // Read vulnerabilires in https://connect2id.com/blog/nimbus-jose-jwt-7-9 and
-        // then try to
-        // exploit
-        // vulnerability
         performAttackServerSideConfigurations(msg, param, jwtTokenBean, value);
     }
 
