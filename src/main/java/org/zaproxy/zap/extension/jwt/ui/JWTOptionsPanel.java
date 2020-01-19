@@ -30,6 +30,7 @@ import java.awt.event.FocusListener;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Arrays;
+
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -43,6 +44,7 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
 import javax.swing.filechooser.FileFilter;
+
 import org.parosproxy.paros.model.OptionsParam;
 import org.parosproxy.paros.view.AbstractParamPanel;
 import org.parosproxy.paros.view.View;
@@ -87,7 +89,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
 
         settingsScrollPane =
                 new JScrollPane(
-                        ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+                        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         this.add(settingsScrollPane, BorderLayout.NORTH);
         settingsScrollPane.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
@@ -227,6 +229,19 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                 new JCheckBox(
                         JWTI18n.getMessage("jwt.settings.general.ignoreClientSideScan.checkBox"));
         settingsPanel.add(ignoreClientConfigurationScanCheckBox, gridBagConstraints);
+        // https://github.com/pinnace/burp-jwt-fuzzhelper-extension
+        JButton b = new JButton("add");
+        b.addActionListener(
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        gridBagConstraints.gridy++;
+                        settingsPanel.add(new JCheckBox("New"), gridBagConstraints);
+                        revalidate();
+                    }
+                });
+        gridBagConstraints.gridy++;
+        settingsPanel.add(b, gridBagConstraints);
     }
 
     private void showAddPayloadDialog() {
