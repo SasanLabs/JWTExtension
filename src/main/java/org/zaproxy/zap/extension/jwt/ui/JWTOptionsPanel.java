@@ -30,10 +30,10 @@ import java.awt.event.FocusListener;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Arrays;
-
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -44,7 +44,6 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
 import javax.swing.filechooser.FileFilter;
-
 import org.parosproxy.paros.model.OptionsParam;
 import org.parosproxy.paros.view.AbstractParamPanel;
 import org.parosproxy.paros.view.View;
@@ -86,13 +85,11 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         this.setName(JWTI18n.getMessage("jwt.toolmenu.settings"));
         this.setBorder(new EmptyBorder(4, 4, 4, 4));
         this.setLayout(new BorderLayout());
-
         settingsScrollPane =
                 new JScrollPane(
                         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         this.add(settingsScrollPane, BorderLayout.NORTH);
-        settingsScrollPane.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
         settingsPanel = new JPanel();
         settingsScrollPane.setViewportView(settingsPanel);
         GridBagLayout gridBagLayout = new GridBagLayout();
@@ -229,18 +226,38 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                 new JCheckBox(
                         JWTI18n.getMessage("jwt.settings.general.ignoreClientSideScan.checkBox"));
         settingsPanel.add(ignoreClientConfigurationScanCheckBox, gridBagConstraints);
+        gridBagConstraints.gridy++;
+        JComboBox<String> headerOrPayload =
+                new JComboBox<String>(new String[] {"Header", "Payload"});
+        headerOrPayload.setSelectedIndex(0);
+        settingsPanel.add(headerOrPayload, gridBagConstraints);
+        gridBagConstraints.gridx++;
+        JTextField fieldName = new JTextField();
+        fieldName.setColumns(15);
+        settingsPanel.add(fieldName, gridBagConstraints);
+        gridBagConstraints.gridx++;
         // https://github.com/pinnace/burp-jwt-fuzzhelper-extension
-        JButton b = new JButton("add");
+        JButton b = new JButton("Save");
         b.addActionListener(
                 new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         gridBagConstraints.gridy++;
-                        settingsPanel.add(new JCheckBox("New"), gridBagConstraints);
+                        gridBagConstraints.gridx = 0;
+                        // settingsPanel.add(new JCheckBox("New"), gridBagConstraints);
+                        JComboBox<String> headerOrPayload =
+                                new JComboBox<String>(new String[] {"Header", "Payload"});
+                        headerOrPayload.setSelectedIndex(0);
+                        settingsPanel.add(headerOrPayload, gridBagConstraints);
+                        gridBagConstraints.gridx++;
+                        JTextField fieldName = new JTextField();
+                        fieldName.setColumns(15);
+                        settingsPanel.add(fieldName, gridBagConstraints);
+                        b.setText("Remove");
+                        
                         revalidate();
                     }
                 });
-        gridBagConstraints.gridy++;
         settingsPanel.add(b, gridBagConstraints);
     }
 
