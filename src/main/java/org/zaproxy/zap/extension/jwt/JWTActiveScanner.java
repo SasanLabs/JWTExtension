@@ -99,11 +99,12 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
                 break;
         }
 
-        boolean result = performAttackClientSideConfigurations(msg, param, jwtTokenBean, value);
-        if (result) {
-            return;
+        if (!JWTConfiguration.getInstance().isIgnoreClientConfigurationScan()) {
+            if (performAttackClientSideConfigurations(msg, param, jwtTokenBean, value)) {
+                return;
+            }
+            this.decreaseRequestCount();
         }
-        this.decreaseRequestCount();
         // add https://nvd.nist.gov/vuln/detail/CVE-2018-0114 for Jose library issues
         // Read vulnerabilires in https://connect2id.com/blog/nimbus-jose-jwt-7-9 and
         // then try to

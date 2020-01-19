@@ -32,6 +32,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -64,7 +65,6 @@ public class JWTOptionsPanel extends AbstractParamPanel {
 
     private int hmacMaxKeyLength;
     private String trustStorePath;
-
     private JScrollPane settingsScrollPane;
     private JPanel footerPanel;
     private JPanel settingsPanel;
@@ -77,6 +77,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
     private JTextField trustStoreFileChooserTextField;
     private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
     private JButton showFuzzerDialogButton;
+    private JCheckBox ignoreClientConfigurationScanCheckBox;
 
     public JWTOptionsPanel() {
         super();
@@ -112,7 +113,9 @@ public class JWTOptionsPanel extends AbstractParamPanel {
 
         this.hmacSettingsSection(gridBagConstraints);
         this.rsaSettingsSection(gridBagConstraints);
-
+        gridBagConstraints.gridy++;
+        gridBagConstraints.gridx = 0;
+        this.generalSettingsSection(gridBagConstraints);
         gridBagConstraints.gridy++;
         footerPanel.add(getResetButton(), gridBagConstraints);
     }
@@ -128,26 +131,6 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                     }
                 });
         return resetButton;
-    }
-
-    /** Resets entire panel to default values. */
-    private void resetOptionsPanel() {
-        threadCount = JWTConfiguration.DEFAULT_THREAD_COUNT;
-        hmacMaxKeyLength = JWTConfiguration.DEFAULT_HMAC_MAX_KEY_LENGTH;
-        threadCountTextField.setText("" + threadCount);
-        maxHmacKeyLengthTextField.setText("" + hmacMaxKeyLength);
-        trustStorePasswordField.setText("");
-        trustStoreFileChooserTextField.setText("");
-        showFuzzerDialogButton.setEnabled(true);
-        fileStringPayloadGeneratorUI = null;
-        trustStorePassword = null;
-    }
-
-    private void populateOptionsPanel() {
-        threadCountTextField.setText("" + threadCount);
-        maxHmacKeyLengthTextField.setText("" + hmacMaxKeyLength);
-        trustStoreFileChooserTextField.setText(trustStorePath);
-        trustStorePasswordField.setText(trustStorePassword);
     }
 
     private void trustStoreFileChooserButton() {
@@ -234,6 +217,16 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                 });
         lblTrustStorePassword.setLabelFor(trustStorePasswordField);
         settingsPanel.add(trustStorePasswordField, gridBagConstraints);
+    }
+
+    private void generalSettingsSection(GridBagConstraints gridBagConstraints) {
+        JLabel lblGeneralSettings = new JLabel(JWTI18n.getMessage("jwt.settings.general.header"));
+        settingsPanel.add(lblGeneralSettings, gridBagConstraints);
+        gridBagConstraints.gridy++;
+        ignoreClientConfigurationScanCheckBox =
+                new JCheckBox(
+                        JWTI18n.getMessage("jwt.settings.general.ignoreClientSideScan.checkBox"));
+        settingsPanel.add(ignoreClientConfigurationScanCheckBox, gridBagConstraints);
     }
 
     private void showAddPayloadDialog() {
@@ -364,6 +357,27 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         gridBagConstraints.gridx = 0;
     }
 
+    /** Resets entire panel to default values. */
+    private void resetOptionsPanel() {
+        threadCount = JWTConfiguration.DEFAULT_THREAD_COUNT;
+        hmacMaxKeyLength = JWTConfiguration.DEFAULT_HMAC_MAX_KEY_LENGTH;
+        threadCountTextField.setText("" + threadCount);
+        maxHmacKeyLengthTextField.setText("" + hmacMaxKeyLength);
+        trustStorePasswordField.setText("");
+        trustStoreFileChooserTextField.setText("");
+        showFuzzerDialogButton.setEnabled(true);
+        fileStringPayloadGeneratorUI = null;
+        trustStorePassword = null;
+        ignoreClientConfigurationScanCheckBox.setSelected(false);
+    }
+
+    private void populateOptionsPanel() {
+        threadCountTextField.setText("" + threadCount);
+        maxHmacKeyLengthTextField.setText("" + hmacMaxKeyLength);
+        trustStoreFileChooserTextField.setText(trustStorePath);
+        trustStorePasswordField.setText(trustStorePassword);
+    }
+
     @Override
     public void initParam(Object optionParams) {
         this.resetOptionsPanel();
@@ -373,6 +387,8 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         hmacMaxKeyLength = jwtConfiguration.getHmacMaxKeyLength();
         threadCount = jwtConfiguration.getThreadCount();
         trustStorePassword = jwtConfiguration.getTrustStorePassword();
+        ignoreClientConfigurationScanCheckBox.setSelected(
+                jwtConfiguration.isIgnoreClientConfigurationScan());
         if (jwtConfiguration.getFileStringPayloadGeneratorUI() != null) {
             fileStringPayloadGeneratorUI = jwtConfiguration.getFileStringPayloadGeneratorUI();
         }
@@ -391,6 +407,8 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         jwtConfiguration.setThreadCount(threadCount);
         jwtConfiguration.setFileStringPayloadGeneratorUI(fileStringPayloadGeneratorUI);
         jwtConfiguration.setTrustStorePassword(trustStorePassword);
+        jwtConfiguration.setIgnoreClientConfigurationScan(
+                ignoreClientConfigurationScanCheckBox.isSelected());
     }
 
     @Override
