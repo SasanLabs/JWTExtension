@@ -25,10 +25,13 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.common.AbstractParam;
 import org.zaproxy.zap.extension.fuzz.payloads.generator.FileStringPayloadGenerator;
 import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUI;
+import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 
 /**
  * This class holds UI configuration and used by JWT Active Scanner for performing JWT based
@@ -76,6 +79,7 @@ public class JWTConfiguration extends AbstractParam {
     private int hmacMaxKeyLength;
     private boolean ignoreClientConfigurationScan;
     private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
+    private List<CustomFieldFuzzer> customFieldFuzzers = new ArrayList<CustomFieldFuzzer>();
 
     private static volatile JWTConfiguration jwtConfiguration;
 
