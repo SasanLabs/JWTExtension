@@ -146,7 +146,15 @@ public class JWTConfiguration extends AbstractParam {
         return fileStringPayloadGeneratorUI;
     }
 
-    public void setFileStringPayloadGeneratorUI(
+    public List<CustomFieldFuzzer> getCustomFieldFuzzers() {
+		return customFieldFuzzers;
+	}
+
+	public void setCustomFieldFuzzers(List<CustomFieldFuzzer> customFieldFuzzers) {
+		this.customFieldFuzzers = customFieldFuzzers;
+	}
+
+	public void setFileStringPayloadGeneratorUI(
             FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI) {
         this.fileStringPayloadGeneratorUI = fileStringPayloadGeneratorUI;
         if (fileStringPayloadGeneratorUI != null
