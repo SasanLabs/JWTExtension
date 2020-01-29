@@ -28,10 +28,11 @@ import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.io.File;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -287,12 +288,26 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                                         JWTI18n.getMessage(
                                                 "jwt.settings.general.customFuzz.addPayload"));
                         settingsPanel.add(addPayload, gridBagConstraints);
+                        CustomFieldFuzzer customFieldFuzzer = new CustomFieldFuzzer();
                         addPayload.addActionListener(
                                 new ActionListener() {
 
                                     @Override
                                     public void actionPerformed(ActionEvent e) {
-                                        showAddPayloadDialog();
+                                        Consumer<FileStringPayloadGeneratorUI>
+                                                customFieldFuzzerConsumer =
+                                                        (FileStringPayloadGeneratorUI) ->
+                                                                customFieldFuzzer
+                                                                        .setFileStringPayloadGeneratorUI(
+                                                                                FileStringPayloadGeneratorUI);
+                                        Supplier<FileStringPayloadGeneratorUI>
+                                                customFieldFuzzerSupplier =
+                                                        () ->
+                                                                customFieldFuzzer
+                                                                        .getFileStringPayloadGeneratorUI();
+                                        showAddPayloadDialog(
+                                                customFieldFuzzerSupplier,
+                                                customFieldFuzzerConsumer);
                                     }
                                 });
 
@@ -309,8 +324,6 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                                         JWTI18n.getMessage(
                                                 "jwt.settings.general.customFuzz.removeFuzzFields"));
                         settingsPanel.add(removeButton, gridBagConstraints);
-
-                        CustomFieldFuzzer customFieldFuzzer = new CustomFieldFuzzer();
                         removeButton.addActionListener(
                                 new ActionListener() {
 
@@ -348,21 +361,22 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                     }
                 });
         settingsPanel.add(addButton, gridBagConstraints);
-
-        // https://github.com/pinnace/burp-jwt-fuzzhelper-extension
     }
 
-    private void showAddPayloadDialog() {
+    private void showAddPayloadDialog(
+            Supplier<FileStringPayloadGeneratorUI> getFileStringPayloadGeneratorUISupplier,
+            Consumer<FileStringPayloadGeneratorUI> setFileStringPayloadGeneratorUIConsumer) {
         FileStringPayloadGeneratorUIHandler payloadGeneratorUIHandler =
                 new FileStringPayloadGeneratorUIHandler();
         PayloadGeneratorsContainer payloadGeneratorsContainer =
                 new PayloadGeneratorsContainer(
                         Arrays.asList(payloadGeneratorUIHandler), "JWT Fuzzer");
-        if (fileStringPayloadGeneratorUI != null) {
+        if (getFileStringPayloadGeneratorUISupplier.get() != null) {
             ((FileStringPayloadGeneratorUIPanel)
                             payloadGeneratorsContainer.getPanel(
                                     payloadGeneratorUIHandler.getName()))
-                    .populateFileStringPayloadGeneratorUIPanel(fileStringPayloadGeneratorUI);
+                    .populateFileStringPayloadGeneratorUIPanel(
+                            getFileStringPayloadGeneratorUISupplier.get());
         }
         AddPayloadDialog jwtAddPayloadDialog =
                 new AddPayloadDialog(
@@ -374,8 +388,8 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                     @Override
                     protected void performAction() {
                         super.performAction();
-                        fileStringPayloadGeneratorUI =
-                                (FileStringPayloadGeneratorUI) getPayloadGeneratorUI();
+                        setFileStringPayloadGeneratorUIConsumer.accept(
+                                (FileStringPayloadGeneratorUI) getPayloadGeneratorUI());
                         showFuzzerDialogButton.setEnabled(true);
                     }
 
@@ -470,7 +484,15 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         showFuzzerDialogButton.setEnabled(false);
-                        showAddPayloadDialog();
+                        Consumer<FileStringPayloadGeneratorUI> fileStringPayloadGeneratorConsumer =
+                                (fileStringPayloadGeneratorUI) ->
+                                        setFileStringPayloadGeneratorUI(
+                                                fileStringPayloadGeneratorUI);
+                        Supplier<FileStringPayloadGeneratorUI> fileStringPayloadGeneratorSupplier =
+                                () -> getFileStringPayloadGeneratorUI();
+                        showAddPayloadDialog(
+                                fileStringPayloadGeneratorSupplier,
+                                fileStringPayloadGeneratorConsumer);
                     }
                 });
         lblBruteForceKeyAttribute.setLabelFor(showFuzzerDialogButton);
@@ -517,6 +539,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         if (jwtConfiguration.getFileStringPayloadGeneratorUI() != null) {
             fileStringPayloadGeneratorUI = jwtConfiguration.getFileStringPayloadGeneratorUI();
         }
+        customFieldFuzzers = jwtConfiguration.getCustomFieldFuzzers();
         this.populateOptionsPanel();
     }
 
@@ -534,15 +557,20 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         jwtConfiguration.setTrustStorePassword(trustStorePassword);
         jwtConfiguration.setIgnoreClientConfigurationScan(
                 ignoreClientConfigurationScanCheckBox.isSelected());
+        jwtConfiguration.setCustomFieldFuzzers(customFieldFuzzers);
     }
 
     @Override
     public String getHelpIndex() {
         return "addon.fuzzer.options";
     }
+    
+    public FileStringPayloadGeneratorUI getFileStringPayloadGeneratorUI() {
+        return fileStringPayloadGeneratorUI;
+    }
 
-    public static interface CustomFileFuzzerAddedListener {
-
-        void added(Path file);
+    public void setFileStringPayloadGeneratorUI(
+            FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI) {
+        this.fileStringPayloadGeneratorUI = fileStringPayloadGeneratorUI;
     }
 }
