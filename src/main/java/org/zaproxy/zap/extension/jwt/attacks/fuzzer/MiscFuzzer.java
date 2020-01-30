@@ -35,6 +35,8 @@ public class MiscFuzzer implements JWTFuzzer {
 
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.miscFuzzer.";
 
+    private void executingHMACSecretKey() {}
+
     /**
      *
      *
