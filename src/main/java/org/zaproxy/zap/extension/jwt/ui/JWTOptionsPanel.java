@@ -564,7 +564,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
     public String getHelpIndex() {
         return "addon.fuzzer.options";
     }
-    
+
     public FileStringPayloadGeneratorUI getFileStringPayloadGeneratorUI() {
         return fileStringPayloadGeneratorUI;
     }

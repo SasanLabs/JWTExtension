@@ -28,10 +28,14 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.function.Predicate;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.zaproxy.zap.extension.fuzz.payloads.DefaultPayload;
+import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUI;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
+import org.zaproxy.zap.extension.jwt.attacks.BFAttack;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
@@ -43,15 +47,41 @@ public class HeaderFuzzer implements JWTFuzzer {
 
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.headerFuzzer.";
 
-    
-    
-    private void handle() {
-    	List<CustomFieldFuzzer> customFieldFuzzers = JWTConfiguration.getInstance().getCustomFieldFuzzers();
-    	
+    private void handle(JWTTokenBean jwtTokenBean) {
+        JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
+        JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
+        List<CustomFieldFuzzer> customFieldFuzzers =
+                JWTConfiguration.getInstance().getCustomFieldFuzzers();
+        for (CustomFieldFuzzer customFieldFuzzer : customFieldFuzzers) {
+            if (customFieldFuzzer.isHeaderField()) {
+                String jwtHeaderField = customFieldFuzzer.getFieldName();
+                FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI =
+                        customFieldFuzzer.getFileStringPayloadGeneratorUI();
+
+                Predicate<DefaultPayload> predicate =
+                        (fieldValue) -> {
+                            if (headerJSONObject.has(customFieldFuzzer.getFieldName())) {
+                                headerJSONObject.put(customFieldFuzzer.getFieldName(), fieldValue);
+                                if (customFieldFuzzer.isSignatureRequired()) {
+                                    //
+                                    return false;
+                                }
+                                return false;
+                            } else {
+                                return false;
+                            }
+                        };
+                BFAttack<DefaultPayload> bfAttack =
+                        new BFAttack<DefaultPayload>(
+                                predicate,
+                                fileStringPayloadGeneratorUI.getPayloadGenerator().iterator(),
+                                null,
+                                null);
+                bfAttack.execute();
+            }
+        }
     }
-    
-    
-    
+
     // TODO adding JKU etc payloads
     // (https://github.com/andresriancho/jwt-fuzzer/blob/master/jwtfuzzer/fuzzing_functions/header_jku.py)
     // If JKU holds read if there are any vulnerabilities exists.
