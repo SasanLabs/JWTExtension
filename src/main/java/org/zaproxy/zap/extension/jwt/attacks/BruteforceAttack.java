@@ -87,6 +87,7 @@ public class BruteforceAttack {
     private boolean isAttackSuccessful = false;
 
     private ExecutorService executorService;
+    List<String> permutedSecretKeys = new ArrayList<String>();
 
     /**
      * @param jwtTokenBean Parsed JWT Token Bean
@@ -106,10 +107,6 @@ public class BruteforceAttack {
         threadCount = JWTConfiguration.getInstance().getThreadCount();
         executorService = Executors.newFixedThreadPool(threadCount);
     }
-
-    //    private <T> CompletableFuture<T> executeInMultipleThreads(Supplier<T> task) {
-    //        return CompletableFuture.supplyAsync(task, executorService);
-    //    }
 
     private void raiseAlert(
             String messagePrefix,
@@ -167,8 +164,6 @@ public class BruteforceAttack {
         return CompletableFuture.supplyAsync(attackTask, executorService);
     }
 
-    List<String> secretKeys = new ArrayList<String>();
-
     private void generatingHMACSecretKeyAndExecutingAttack(
             StringBuilder secretKey, int index, List<CompletableFuture<?>> completableFutures) {
         if (isStop()) {
@@ -179,9 +174,15 @@ public class BruteforceAttack {
         if (index == hmacMaxKeyLength) {
             completableFutures.add(
                     this.generateHMACWithSecretKeyAndCheckIfAttackSuccessful(secretKey.toString()));
-            secretKeys.add(secretKey.toString());
-            if (secretKeys.size() == 10) {
-                // call
+            permutedSecretKeys.add(secretKey.toString());
+            if (permutedSecretKeys.size() == 10) {
+                BFAttack<String> bfAttack =
+                        new BFAttack<String>(
+                                getPredicateForVerifyingHMACSecretKey(),
+                                permutedSecretKeys.iterator(),
+                                null,
+                                null);
+                isAttackSuccessful = bfAttack.execute();
             }
             this.jwtActiveScanner.decreaseRequestCount();
         } else {
@@ -207,22 +208,33 @@ public class BruteforceAttack {
         List<CompletableFuture<?>> completableFutures = new ArrayList<>();
 
         this.generatingHMACSecretKeyAndExecutingAttack(secretKey, 0, completableFutures);
-        if (secretKeys.size() == 10) {
-            // call
+        if (isStop()) {
+            LOGGER.info(
+                    "Stopping because either attack is successful or user has manually stopped the execution");
+            return;
+        } else {
+            if (permutedSecretKeys.size() > 0) {
+                BFAttack<String> bfAttack =
+                        new BFAttack<String>(
+                                getPredicateForVerifyingHMACSecretKey(),
+                                permutedSecretKeys.iterator(),
+                                null,
+                                null);
+                isAttackSuccessful = bfAttack.execute();
+            }
         }
-        // waitForCompletion(completableFutures);
     }
 
-    private Predicate<DefaultPayload> getPredicateForCheckingHMACSecretKey() {
-        Predicate<DefaultPayload> predicate =
-                (fieldValue) -> {
-                    LOGGER.info("Secret Key: " + fieldValue.getValue());
+    private Predicate<String> getPredicateForVerifyingHMACSecretKey() {
+        Predicate<String> predicateForVerifyingSecretKey =
+                (secretKey) -> {
+                    LOGGER.info("Secret Key: " + secretKey);
                     try {
                         String tokenToBeSigned = jwtTokenBean.getTokenWithoutSignature();
                         String base64EncodedSignature =
                                 JWTUtils.getBase64EncodedHMACSignedToken(
                                         JWTUtils.getBytes(tokenToBeSigned),
-                                        JWTUtils.getBytes(fieldValue.getValue()));
+                                        JWTUtils.getBytes(secretKey));
                         if (base64EncodedSignature.equals(
                                 JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
                                         this.jwtTokenBean.getSignature()))) {
@@ -233,15 +245,20 @@ public class BruteforceAttack {
                     }
                     return false;
                 };
-        return predicate;
+        return predicateForVerifyingSecretKey;
     }
 
     private void fileBasedHMACSecretKeyBruteForce() {
         ResettableAutoCloseableIterator<DefaultPayload> resettableAutoCloseableIterator =
                 JWTConfiguration.getInstance().getPayloadGenerator().iterator();
+        Predicate<DefaultPayload> wrappedPredicateForVerifyingSecretKey =
+                (fieldValue) -> {
+                    String secretKey = fieldValue.getValue();
+                    return getPredicateForVerifyingHMACSecretKey().test(secretKey);
+                };
         BFAttack<DefaultPayload> bfAttack =
                 new BFAttack<DefaultPayload>(
-                        getPredicateForCheckingHMACSecretKey(),
+                        wrappedPredicateForVerifyingSecretKey,
                         resettableAutoCloseableIterator,
                         null,
                         null);
