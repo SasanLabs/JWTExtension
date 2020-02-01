@@ -24,7 +24,9 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWK_SET_URL_HEADE
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.KEY_ID_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NONE_ALGORITHM_VARIANTS;
 
+import com.nimbusds.jose.JOSEException;
 import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -39,6 +41,7 @@ import org.zaproxy.zap.extension.jwt.attacks.GenericAsyncTaskExecutor;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class HeaderFuzzer implements JWTFuzzer {
@@ -49,7 +52,25 @@ public class HeaderFuzzer implements JWTFuzzer {
 
     private ServerSideAttack serverSideAttack;
 
-    private boolean handle(JWTTokenBean jwtTokenBean) {
+    private boolean executeAttackAndRaiseAlert(JWTTokenBean clonJWTTokenBean) {
+        try {
+            if (executeAttack(clonJWTTokenBean.getToken(), serverSideAttack)) {
+                raiseAlert(
+                        MESSAGE_PREFIX,
+                        VulnerabilityType.CUSTOM_PAYLOAD,
+                        Alert.RISK_HIGH,
+                        Alert.CONFIDENCE_HIGH,
+                        clonJWTTokenBean.getToken(),
+                        serverSideAttack);
+                return true;
+            }
+        } catch (UnsupportedEncodingException e) {
+            LOGGER.error("Following exception occurred: ", e);
+        }
+        return false;
+    }
+
+    private boolean handleCustomFuzzers(JWTTokenBean jwtTokenBean) {
         JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
         JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
         List<CustomFieldFuzzer> customFieldFuzzers =
@@ -62,29 +83,40 @@ public class HeaderFuzzer implements JWTFuzzer {
                 String jwtHeaderField = customFieldFuzzer.getFieldName();
                 FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI =
                         customFieldFuzzer.getFileStringPayloadGeneratorUI();
-
+                if (fileStringPayloadGeneratorUI == null) {
+                    continue;
+                }
                 Predicate<DefaultPayload> predicate =
                         (fieldValue) -> {
                             if (headerJSONObject.has(jwtHeaderField)) {
                                 headerJSONObject.put(jwtHeaderField, fieldValue);
                                 clonedJWTokenBean.setHeader(headerJSONObject.toString());
                                 if (customFieldFuzzer.isSignatureRequired()) {
-                                    // raise alert if found
+                                    try {
+                                        JWTUtils.handleSigningOfTokenCustomFieldFuzzer(
+                                                customFieldFuzzer, clonedJWTokenBean);
+                                        return executeAttackAndRaiseAlert(clonedJWTokenBean);
+                                    } catch (UnsupportedEncodingException
+                                            | ParseException
+                                            | JOSEException e) {
+                                        LOGGER.error(
+                                                "Failed while signing the clonedJWTTokenBean:", e);
+                                    }
                                     return false;
                                 } else {
-                                    return false;
+                                    return executeAttackAndRaiseAlert(clonedJWTokenBean);
                                 }
                             } else {
                                 return false;
                             }
                         };
-                GenericAsyncTaskExecutor<DefaultPayload> bfAttack =
+
+                GenericAsyncTaskExecutor<DefaultPayload> genericTaskExecutor =
                         new GenericAsyncTaskExecutor<DefaultPayload>(
                                 predicate,
                                 fileStringPayloadGeneratorUI.getPayloadGenerator().iterator(),
-                                null,
-                                null);
-                if (bfAttack.execute()) {
+                                this.serverSideAttack.getJwtActiveScanner());
+                if (genericTaskExecutor.execute()) {
                     return true;
                 }
             }
@@ -135,9 +167,10 @@ public class HeaderFuzzer implements JWTFuzzer {
                     if (executeAttack(fuzzedJWTToken, this.serverSideAttack)) {
                         raiseAlert(
                                 MESSAGE_PREFIX,
-                                "noneAlgorithm",
+                                VulnerabilityType.NONE_ALGORITHM,
                                 Alert.RISK_HIGH,
                                 Alert.CONFIDENCE_HIGH,
+                                fuzzedJWTToken,
                                 this.serverSideAttack);
                         return true;
                     }
@@ -163,7 +196,7 @@ public class HeaderFuzzer implements JWTFuzzer {
         this.serverSideAttack = serverSideAttack;
         JWTTokenBean jwtTokenBean = this.serverSideAttack.getJwtTokenBean();
         return executeNoneAlgorithmVariantAttacks(jwtTokenBean)
-                || this.handle(jwtTokenBean)
+                || this.handleCustomFuzzers(jwtTokenBean)
                 || populateKidOrJkuHeaderManipulatedFuzzedToken(jwtTokenBean);
     }
 }

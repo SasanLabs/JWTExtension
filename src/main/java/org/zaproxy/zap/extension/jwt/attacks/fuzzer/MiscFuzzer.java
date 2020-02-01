@@ -21,6 +21,7 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
 import org.parosproxy.paros.core.scanner.Alert;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
  * All the fuzzed token which requires modification to more than one component of JWT token will be
@@ -42,9 +43,10 @@ public class MiscFuzzer implements JWTFuzzer {
         if (result) {
             raiseAlert(
                     MESSAGE_PREFIX,
-                    "emptyTokens",
+                    VulnerabilityType.EMPTY_TOKENS,
                     Alert.RISK_HIGH,
                     Alert.CONFIDENCE_HIGH,
+                    fuzzedJWTToken,
                     this.serverSideAttack);
         }
         return result;

@@ -28,11 +28,7 @@ import com.nimbusds.jose.crypto.MACSigner;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.parosproxy.paros.core.scanner.Alert;
@@ -44,6 +40,7 @@ import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTI18n;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 import org.zaproxy.zap.utils.ResettableAutoCloseableIterator;
 
 /**
@@ -77,17 +74,12 @@ public class BruteforceAttack {
     private int hmacMaxKeyLength = DEFAULT_SECRET_KEY_CHARACTERS.length();
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.bruteForce.";
 
-    // TODO using threadCount to configure thread pool. Need to check with @thc202
-    private int threadCount;
-
     private JWTTokenBean jwtTokenBean;
     private JWTActiveScanner jwtActiveScanner;
-    private String param;
     private HttpMessage msg;
+    private String param;
     private boolean isAttackSuccessful = false;
-
-    private ExecutorService executorService;
-    List<String> permutedSecretKeys = new ArrayList<String>();
+    private List<String> permutedSecretKeys = new ArrayList<String>();
 
     /**
      * @param jwtTokenBean Parsed JWT Token Bean
@@ -104,93 +96,59 @@ public class BruteforceAttack {
         this.jwtTokenBean = jwtTokenBean;
         this.param = param;
         this.msg = msg;
-        threadCount = JWTConfiguration.getInstance().getThreadCount();
-        executorService = Executors.newFixedThreadPool(threadCount);
     }
 
-    private void raiseAlert(
-            String messagePrefix,
-            int risk,
-            int confidence,
-            String param,
-            String value,
-            HttpMessage msg) {
+    private void raiseAlert(String secretKey) {
         this.jwtActiveScanner.bingo(
-                risk,
-                confidence,
-                JWTI18n.getMessage(messagePrefix + "name"),
-                JWTI18n.getMessage(messagePrefix + "desc"),
-                msg.getRequestHeader().getURI().toString(),
-                param,
-                value,
-                JWTI18n.getMessage(messagePrefix + "refs"),
-                JWTI18n.getMessage(messagePrefix + "soln"),
-                msg);
+                Alert.RISK_HIGH,
+                Alert.CONFIDENCE_HIGH,
+                JWTI18n.getMessage(
+                        MESSAGE_PREFIX
+                                + "."
+                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
+                                + ".name"),
+                JWTI18n.getMessage(
+                        MESSAGE_PREFIX
+                                + "."
+                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
+                                + ".desc"),
+                this.msg.getRequestHeader().getURI().toString(),
+                this.param,
+                secretKey,
+                JWTI18n.getMessage(
+                        MESSAGE_PREFIX
+                                + "."
+                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
+                                + ".refs"),
+                JWTI18n.getMessage(
+                        MESSAGE_PREFIX
+                                + "."
+                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
+                                + ".soln"),
+                this.msg);
     }
 
-    private CompletableFuture<Void> generateHMACWithSecretKeyAndCheckIfAttackSuccessful(
-            String secretKey) {
-        Supplier<Void> attackTask =
-                () -> {
-                    if (isStop()) {
-                        LOGGER.info(
-                                "Stopping because either attack is successfull or user has manually stopped the execution");
-                        return null;
-                    }
-                    LOGGER.info("Secret Key: " + secretKey);
-                    try {
-                        String tokenToBeSigned = jwtTokenBean.getTokenWithoutSignature();
-                        String base64EncodedSignature =
-                                JWTUtils.getBase64EncodedHMACSignedToken(
-                                        JWTUtils.getBytes(tokenToBeSigned),
-                                        JWTUtils.getBytes(secretKey));
-                        if (base64EncodedSignature.equals(
-                                JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
-                                        this.jwtTokenBean.getSignature()))) {
-                            isAttackSuccessful = true;
-                            raiseAlert(
-                                    MESSAGE_PREFIX,
-                                    Alert.RISK_HIGH,
-                                    Alert.CONFIDENCE_HIGH,
-                                    this.param,
-                                    secretKey,
-                                    msg);
-                        }
-                    } catch (UnsupportedEncodingException | JWTExtensionValidationException e) {
-                        LOGGER.error("Error occurred while generating Signed Token", e);
-                    }
-                    return null;
-                };
-        return CompletableFuture.supplyAsync(attackTask, executorService);
-    }
-
-    private void generatingHMACSecretKeyAndExecutingAttack(
-            StringBuilder secretKey, int index, List<CompletableFuture<?>> completableFutures) {
+    private void generatingHMACSecretKeyAndExecutingAttack(StringBuilder secretKey, int index) {
         if (isStop()) {
             LOGGER.info(
                     "Stopping because either attack is successful or user has manually stopped the execution");
             return;
         }
         if (index == hmacMaxKeyLength) {
-            completableFutures.add(
-                    this.generateHMACWithSecretKeyAndCheckIfAttackSuccessful(secretKey.toString()));
             permutedSecretKeys.add(secretKey.toString());
-            if (permutedSecretKeys.size() == 10) {
+            if (permutedSecretKeys.size() >= 10) {
                 GenericAsyncTaskExecutor<String> genericAsyncTaskExecutor =
                         new GenericAsyncTaskExecutor<String>(
                                 getPredicateForVerifyingHMACSecretKey(),
                                 permutedSecretKeys.iterator(),
-                                null,
-                                null);
+                                this.jwtActiveScanner);
+                permutedSecretKeys = new ArrayList<String>();
                 isAttackSuccessful = genericAsyncTaskExecutor.execute();
             }
-            this.jwtActiveScanner.decreaseRequestCount();
         } else {
             for (int i = 0; i < secretKeyCharacters.length(); i++) {
                 generatingHMACSecretKeyAndExecutingAttack(
-                        secretKey.append(secretKeyCharacters.charAt(i)),
-                        index + 1,
-                        completableFutures);
+                        secretKey.append(secretKeyCharacters.charAt(i)), index + 1);
                 secretKey.deleteCharAt(index);
             }
         }
@@ -205,9 +163,8 @@ public class BruteforceAttack {
 
     private void permutationBasedHMACSecretKeyBruteForce() {
         StringBuilder secretKey = new StringBuilder();
-        List<CompletableFuture<?>> completableFutures = new ArrayList<>();
 
-        this.generatingHMACSecretKeyAndExecutingAttack(secretKey, 0, completableFutures);
+        this.generatingHMACSecretKeyAndExecutingAttack(secretKey, 0);
         if (isStop()) {
             LOGGER.info(
                     "Stopping because either attack is successful or user has manually stopped the execution");
@@ -218,8 +175,8 @@ public class BruteforceAttack {
                         new GenericAsyncTaskExecutor<String>(
                                 getPredicateForVerifyingHMACSecretKey(),
                                 permutedSecretKeys.iterator(),
-                                null,
-                                null);
+                                this.jwtActiveScanner);
+                permutedSecretKeys = new ArrayList<String>();
                 isAttackSuccessful = genericAsyncTaskExecutor.execute();
             }
         }
@@ -238,6 +195,7 @@ public class BruteforceAttack {
                         if (base64EncodedSignature.equals(
                                 JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
                                         this.jwtTokenBean.getSignature()))) {
+                            raiseAlert(secretKey);
                             return true;
                         }
                     } catch (UnsupportedEncodingException | JWTExtensionValidationException e) {
@@ -260,43 +218,38 @@ public class BruteforceAttack {
                 new GenericAsyncTaskExecutor<DefaultPayload>(
                         wrappedPredicateForVerifyingSecretKey,
                         resettableAutoCloseableIterator,
-                        null,
-                        null);
+                        this.jwtActiveScanner);
         isAttackSuccessful = genericAsyncTaskExecutor.execute();
     }
 
     public boolean execute() {
-        try {
-            JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
-            String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
-            if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
-                try {
-                    int minimumRequiredKeyLength =
-                            MACSigner.getMinRequiredSecretLength(JWSAlgorithm.parse(algoType));
-                    if (minimumRequiredKeyLength > this.hmacMaxKeyLength) {
-                        LOGGER.info(
-                                "Provided Key Length is "
-                                        + this.hmacMaxKeyLength
-                                        + " smaller than required Key Length "
-                                        + minimumRequiredKeyLength
-                                        + ". Hence overriding it");
-                        this.hmacMaxKeyLength = minimumRequiredKeyLength;
-                    }
-                } catch (JOSEException e) {
-                    LOGGER.error("Unable to get the Minimum Required Key Length.", e);
+        JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
+        String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
+        if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
+            try {
+                int minimumRequiredKeyLength =
+                        MACSigner.getMinRequiredSecretLength(JWSAlgorithm.parse(algoType));
+                if (minimumRequiredKeyLength > this.hmacMaxKeyLength) {
+                    LOGGER.info(
+                            "Provided Key Length is "
+                                    + this.hmacMaxKeyLength
+                                    + " smaller than required Key Length "
+                                    + minimumRequiredKeyLength
+                                    + ". Hence overriding it");
+                    this.hmacMaxKeyLength = minimumRequiredKeyLength;
                 }
-                this.fileBasedHMACSecretKeyBruteForce();
-                this.permutationBasedHMACSecretKeyBruteForce();
-                if (this.isAttackSuccessful) {
-                    return true;
-                } else {
-                    return false;
-                }
+            } catch (JOSEException e) {
+                LOGGER.error("Unable to get the Minimum Required Key Length.", e);
+            }
+            this.fileBasedHMACSecretKeyBruteForce();
+            this.permutationBasedHMACSecretKeyBruteForce();
+            if (this.isAttackSuccessful) {
+                return true;
             } else {
                 return false;
             }
-        } finally {
-            executorService.shutdown();
+        } else {
+            return false;
         }
     }
 }

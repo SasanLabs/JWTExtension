@@ -21,14 +21,25 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NULL_BYTE_CHARACTER;
 
+import com.nimbusds.jose.JOSEException;
 import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
+import java.util.List;
+import java.util.function.Predicate;
 import net.sf.json.JSONException;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
+import org.zaproxy.zap.extension.fuzz.payloads.DefaultPayload;
+import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUI;
+import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
+import org.zaproxy.zap.extension.jwt.attacks.GenericAsyncTaskExecutor;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
+import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
+import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
  * TODO need to add more attacks based on Payloads. However it is tough to find payload attacks lets
@@ -42,18 +53,82 @@ public class PayloadFuzzer implements JWTFuzzer {
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.payloadFuzzer.";
     private ServerSideAttack serverSideAttack;
 
-    private boolean executeAttack(String fuzzedJWTToken) {
+    private boolean executAttackAndRaiseAlert(
+            String fuzzedJWTToken, VulnerabilityType vulnerabilityType) {
         boolean result = executeAttack(fuzzedJWTToken, serverSideAttack);
         if (result) {
             raiseAlert(
                     MESSAGE_PREFIX,
-                    "nullByte",
+                    vulnerabilityType,
                     Alert.RISK_HIGH,
                     Alert.CONFIDENCE_HIGH,
+                    fuzzedJWTToken,
                     this.serverSideAttack);
         }
         return result;
     }
+
+    private boolean handleCustomFuzzers(JWTTokenBean jwtTokenBean) {
+        JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
+        JSONObject payloadJSONObject = new JSONObject(clonedJWTokenBean.getPayload());
+        List<CustomFieldFuzzer> customFieldFuzzers =
+                JWTConfiguration.getInstance().getCustomFieldFuzzers();
+        for (CustomFieldFuzzer customFieldFuzzer : customFieldFuzzers) {
+            if (!customFieldFuzzer.isHeaderField()) {
+                if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+                    return false;
+                }
+                String jwtHeaderField = customFieldFuzzer.getFieldName();
+                FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI =
+                        customFieldFuzzer.getFileStringPayloadGeneratorUI();
+
+                Predicate<DefaultPayload> predicate =
+                        (fieldValue) -> {
+                            if (payloadJSONObject.has(jwtHeaderField)) {
+                                payloadJSONObject.put(jwtHeaderField, fieldValue);
+                                clonedJWTokenBean.setPayload(payloadJSONObject.toString());
+                                if (customFieldFuzzer.isSignatureRequired()) {
+                                    try {
+                                        JWTUtils.handleSigningOfTokenCustomFieldFuzzer(
+                                                customFieldFuzzer, clonedJWTokenBean);
+                                        return executAttackAndRaiseAlert(
+                                                clonedJWTokenBean.getToken(),
+                                                VulnerabilityType.CUSTOM_PAYLOAD);
+                                    } catch (UnsupportedEncodingException
+                                            | ParseException
+                                            | JOSEException e) {
+                                        LOGGER.error(
+                                                "Failed while signing the clonedJWTTokenBean:", e);
+                                    }
+                                    return false;
+                                } else {
+                                    try {
+                                        return executAttackAndRaiseAlert(
+                                                clonedJWTokenBean.getToken(),
+                                                VulnerabilityType.CUSTOM_PAYLOAD);
+                                    } catch (UnsupportedEncodingException e) {
+                                        LOGGER.error(
+                                                "Failed while signing the clonedJWTTokenBean:", e);
+                                    }
+                                    return false;
+                                }
+                            } else {
+                                return false;
+                            }
+                        };
+                GenericAsyncTaskExecutor<DefaultPayload> genericTaskExecutor =
+                        new GenericAsyncTaskExecutor<DefaultPayload>(
+                                predicate,
+                                fileStringPayloadGeneratorUI.getPayloadGenerator().iterator(),
+                                this.serverSideAttack.getJwtActiveScanner());
+                if (genericTaskExecutor.execute()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /**
      * @param jwtTokenBean
      * @param fuzzedTokens
@@ -71,7 +146,8 @@ public class PayloadFuzzer implements JWTFuzzer {
                 if (originalKeyValue instanceof String) {
                     payloadJsonObject.put(key, originalKeyValue.toString() + nullBytePayload);
                     clonedJWTToken.setPayload(payloadJsonObject.toString());
-                    if (executeAttack(clonedJWTToken.getToken())) {
+                    if (executAttackAndRaiseAlert(
+                            clonedJWTToken.getToken(), VulnerabilityType.NULL_BYTE)) {
                         return true;
                     }
                     payloadJsonObject.put(key, originalKeyValue);
@@ -91,6 +167,7 @@ public class PayloadFuzzer implements JWTFuzzer {
     @Override
     public boolean fuzzJWTTokens(ServerSideAttack serverSideAttack) {
         this.serverSideAttack = serverSideAttack;
-        return executeNullByteFuzzedTokens();
+        return executeNullByteFuzzedTokens()
+                || handleCustomFuzzers(new JWTTokenBean(serverSideAttack.getJwtTokenBean()));
     }
 }
