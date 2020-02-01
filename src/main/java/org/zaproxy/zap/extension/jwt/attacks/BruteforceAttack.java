@@ -176,13 +176,13 @@ public class BruteforceAttack {
                     this.generateHMACWithSecretKeyAndCheckIfAttackSuccessful(secretKey.toString()));
             permutedSecretKeys.add(secretKey.toString());
             if (permutedSecretKeys.size() == 10) {
-                BFAttack<String> bfAttack =
-                        new BFAttack<String>(
+                GenericAsyncTaskExecutor<String> genericAsyncTaskExecutor =
+                        new GenericAsyncTaskExecutor<String>(
                                 getPredicateForVerifyingHMACSecretKey(),
                                 permutedSecretKeys.iterator(),
                                 null,
                                 null);
-                isAttackSuccessful = bfAttack.execute();
+                isAttackSuccessful = genericAsyncTaskExecutor.execute();
             }
             this.jwtActiveScanner.decreaseRequestCount();
         } else {
@@ -214,13 +214,13 @@ public class BruteforceAttack {
             return;
         } else {
             if (permutedSecretKeys.size() > 0) {
-                BFAttack<String> bfAttack =
-                        new BFAttack<String>(
+                GenericAsyncTaskExecutor<String> genericAsyncTaskExecutor =
+                        new GenericAsyncTaskExecutor<String>(
                                 getPredicateForVerifyingHMACSecretKey(),
                                 permutedSecretKeys.iterator(),
                                 null,
                                 null);
-                isAttackSuccessful = bfAttack.execute();
+                isAttackSuccessful = genericAsyncTaskExecutor.execute();
             }
         }
     }
@@ -256,13 +256,13 @@ public class BruteforceAttack {
                     String secretKey = fieldValue.getValue();
                     return getPredicateForVerifyingHMACSecretKey().test(secretKey);
                 };
-        BFAttack<DefaultPayload> bfAttack =
-                new BFAttack<DefaultPayload>(
+        GenericAsyncTaskExecutor<DefaultPayload> genericAsyncTaskExecutor =
+                new GenericAsyncTaskExecutor<DefaultPayload>(
                         wrappedPredicateForVerifyingSecretKey,
                         resettableAutoCloseableIterator,
                         null,
                         null);
-        isAttackSuccessful = bfAttack.execute();
+        isAttackSuccessful = genericAsyncTaskExecutor.execute();
     }
 
     public boolean execute() {

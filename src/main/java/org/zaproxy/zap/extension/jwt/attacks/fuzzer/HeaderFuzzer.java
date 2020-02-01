@@ -26,19 +26,19 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NONE_ALGORITHM_VA
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.function.Predicate;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
+import org.parosproxy.paros.core.scanner.Alert;
 import org.zaproxy.zap.extension.fuzz.payloads.DefaultPayload;
 import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUI;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
-import org.zaproxy.zap.extension.jwt.attacks.BFAttack;
+import org.zaproxy.zap.extension.jwt.attacks.GenericAsyncTaskExecutor;
+import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
-import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class HeaderFuzzer implements JWTFuzzer {
@@ -47,39 +47,49 @@ public class HeaderFuzzer implements JWTFuzzer {
 
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.headerFuzzer.";
 
-    private void handle(JWTTokenBean jwtTokenBean) {
+    private ServerSideAttack serverSideAttack;
+
+    private boolean handle(JWTTokenBean jwtTokenBean) {
         JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
         JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
         List<CustomFieldFuzzer> customFieldFuzzers =
                 JWTConfiguration.getInstance().getCustomFieldFuzzers();
         for (CustomFieldFuzzer customFieldFuzzer : customFieldFuzzers) {
             if (customFieldFuzzer.isHeaderField()) {
+                if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+                    return false;
+                }
                 String jwtHeaderField = customFieldFuzzer.getFieldName();
                 FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI =
                         customFieldFuzzer.getFileStringPayloadGeneratorUI();
 
                 Predicate<DefaultPayload> predicate =
                         (fieldValue) -> {
-                            if (headerJSONObject.has(customFieldFuzzer.getFieldName())) {
-                                headerJSONObject.put(customFieldFuzzer.getFieldName(), fieldValue);
+                            if (headerJSONObject.has(jwtHeaderField)) {
+                                headerJSONObject.put(jwtHeaderField, fieldValue);
+                                clonedJWTokenBean.setHeader(headerJSONObject.toString());
                                 if (customFieldFuzzer.isSignatureRequired()) {
-                                    //
+                                    // raise alert if found
+                                    return false;
+                                } else {
                                     return false;
                                 }
-                                return false;
                             } else {
                                 return false;
                             }
                         };
-                BFAttack<DefaultPayload> bfAttack =
-                        new BFAttack<DefaultPayload>(
+                GenericAsyncTaskExecutor<DefaultPayload> bfAttack =
+                        new GenericAsyncTaskExecutor<DefaultPayload>(
                                 predicate,
                                 fileStringPayloadGeneratorUI.getPayloadGenerator().iterator(),
                                 null,
                                 null);
-                bfAttack.execute();
+                if (bfAttack.execute()) {
+                    return true;
+                }
             }
         }
+        return false;
     }
 
     // TODO adding JKU etc payloads
@@ -96,9 +106,7 @@ public class HeaderFuzzer implements JWTFuzzer {
      *
      * @param jwtTokenBean
      */
-    private void populateKidOrJkuHeaderManipulatedFuzzedToken(
-            JWTTokenBean jwtTokenBean,
-            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens) {
+    private boolean populateKidOrJkuHeaderManipulatedFuzzedToken(JWTTokenBean jwtTokenBean) {
         JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
         JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
         if (headerJSONObject.has(KEY_ID_HEADER)) {
@@ -109,28 +117,36 @@ public class HeaderFuzzer implements JWTFuzzer {
             // Try finding if SSRF is there or not.
             // Can use timebased attack for knowing if calling malicious site is visited
         }
+        return false;
     }
 
     /** @param jwtTokenBean */
-    private void populateNoneHashingAlgorithmFuzzedTokens(
-            JWTTokenBean jwtTokenBean,
-            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens) {
+    private boolean executeNoneAlgorithmVariantAttacks(JWTTokenBean jwtTokenBean) {
         JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
         for (String noneVariant : NONE_ALGORITHM_VARIANTS) {
             for (String headerVariant : this.manipulatingHeaders(noneVariant)) {
+                if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+                    return false;
+                }
                 clonedJWTokenBean.setHeader(headerVariant);
                 clonedJWTokenBean.setSignature(JWTUtils.getBytes(""));
                 try {
-                    vulnerabilityTypeAndFuzzedTokens
-                            .computeIfAbsent(
-                                    VulnerabilityType.NONE_ALGORITHM,
-                                    (vulnerabilityType) -> new ArrayList<String>())
-                            .add(clonedJWTokenBean.getToken());
+                    String fuzzedJWTToken = clonedJWTokenBean.getToken();
+                    if (executeAttack(fuzzedJWTToken, this.serverSideAttack)) {
+                        raiseAlert(
+                                MESSAGE_PREFIX,
+                                "noneAlgorithm",
+                                Alert.RISK_HIGH,
+                                Alert.CONFIDENCE_HIGH,
+                                this.serverSideAttack);
+                        return true;
+                    }
                 } catch (UnsupportedEncodingException e) {
                     LOGGER.error("None Algorithm fuzzed token creation failed", e);
                 }
             }
         }
+        return false;
     }
 
     private List<String> manipulatingHeaders(String algo) {
@@ -143,17 +159,11 @@ public class HeaderFuzzer implements JWTFuzzer {
     }
 
     @Override
-    public LinkedHashMap<VulnerabilityType, List<String>> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens =
-                new LinkedHashMap<VulnerabilityType, List<String>>();
-        populateNoneHashingAlgorithmFuzzedTokens(jwtTokenBean, vulnerabilityTypeAndFuzzedTokens);
-        populateKidOrJkuHeaderManipulatedFuzzedToken(
-                jwtTokenBean, vulnerabilityTypeAndFuzzedTokens);
-        return vulnerabilityTypeAndFuzzedTokens;
-    }
-
-    @Override
-    public String getFuzzerMessagePrefix() {
-        return MESSAGE_PREFIX;
+    public boolean fuzzJWTTokens(ServerSideAttack serverSideAttack) {
+        this.serverSideAttack = serverSideAttack;
+        JWTTokenBean jwtTokenBean = this.serverSideAttack.getJwtTokenBean();
+        return executeNoneAlgorithmVariantAttacks(jwtTokenBean)
+                || this.handle(jwtTokenBean)
+                || populateKidOrJkuHeaderManipulatedFuzzedToken(jwtTokenBean);
     }
 }

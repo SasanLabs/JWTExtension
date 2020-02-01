@@ -19,11 +19,8 @@
  */
 package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import org.zaproxy.zap.extension.jwt.JWTTokenBean;
-import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
+import org.parosproxy.paros.core.scanner.Alert;
+import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 
 /**
  * All the fuzzed token which requires modification to more than one component of JWT token will be
@@ -35,7 +32,23 @@ public class MiscFuzzer implements JWTFuzzer {
 
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.miscFuzzer.";
 
-    private void executingHMACSecretKey() {}
+    private ServerSideAttack serverSideAttack;
+
+    private boolean executeAttack(String fuzzedJWTToken) {
+        if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+            return false;
+        }
+        boolean result = executeAttack(fuzzedJWTToken, serverSideAttack);
+        if (result) {
+            raiseAlert(
+                    MESSAGE_PREFIX,
+                    "emptyTokens",
+                    Alert.RISK_HIGH,
+                    Alert.CONFIDENCE_HIGH,
+                    this.serverSideAttack);
+        }
+        return result;
+    }
 
     /**
      *
@@ -44,27 +57,14 @@ public class MiscFuzzer implements JWTFuzzer {
      *   <li>Adds empty header/payload/signature
      *   <li>Adds multiple dots in tokens
      *       <ol>
-     *
-     * @param fuzzedTokens
      */
-    private void addingEmptyPayloads(
-            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens) {
-        vulnerabilityTypeAndFuzzedTokens.put(
-                VulnerabilityType.EMPTY_TOKENS, new ArrayList<String>());
-        vulnerabilityTypeAndFuzzedTokens.get(VulnerabilityType.EMPTY_TOKENS).add("...");
-        vulnerabilityTypeAndFuzzedTokens.get(VulnerabilityType.EMPTY_TOKENS).add(".....");
+    private boolean executeEmptyPayloads() {
+        return executeAttack("...") || executeAttack(".....");
     }
 
     @Override
-    public LinkedHashMap<VulnerabilityType, List<String>> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens =
-                new LinkedHashMap<VulnerabilityType, List<String>>();
-        addingEmptyPayloads(vulnerabilityTypeAndFuzzedTokens);
-        return vulnerabilityTypeAndFuzzedTokens;
-    }
-
-    @Override
-    public String getFuzzerMessagePrefix() {
-        return MESSAGE_PREFIX;
+    public boolean fuzzJWTTokens(ServerSideAttack serverSideAttack) {
+        this.serverSideAttack = serverSideAttack;
+        return executeEmptyPayloads();
     }
 }

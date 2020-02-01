@@ -37,6 +37,7 @@ public interface JWTConstants {
     String[] NONE_ALGORITHM_VARIANTS = {"none", "None", "NONE", "nOnE"};
     String JWT_ALGORITHM_KEY_HEADER = "alg";
     String JWT_RSA_ALGORITHM_IDENTIFIER = "RS";
+    String JWT_RSA_PSS_ALGORITHM_IDENTIFIER = "PS";
     String JWT_HMAC_ALGORITHM_IDENTIFIER = "HS";
     String JWT_EXP_ALGORITHM_IDENTIFIER = "exp";
     String JSON_WEB_KEY_HEADER = "jwk";

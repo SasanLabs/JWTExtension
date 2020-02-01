@@ -19,10 +19,8 @@
  */
 package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import org.zaproxy.zap.extension.jwt.JWTTokenBean;
-import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
+import org.zaproxy.zap.extension.jwt.JWTI18n;
+import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 
 /**
  * Common interface for all the jwt fuzzers.
@@ -31,14 +29,51 @@ import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
  */
 public interface JWTFuzzer {
 
-    /**
-     * Manipulates the JWT token and returns all the manipulated tokens
-     *
-     * @param jwtTokenBean
-     * @return vulnerabilityType and List of manipulated tokens map
-     */
-    LinkedHashMap<VulnerabilityType, List<String>> fuzzedTokens(JWTTokenBean jwtTokenBean);
+    default boolean executeAttack(String fuzzedJWTToken, ServerSideAttack serverSideAttack) {
+        serverSideAttack.getJwtActiveScanner().decreaseRequestCount();
+        return serverSideAttack
+                .getJwtActiveScanner()
+                .sendFuzzedMsgAndCheckIfAttackSuccessful(
+                        serverSideAttack.getMsg(),
+                        serverSideAttack.getParam(),
+                        fuzzedJWTToken,
+                        serverSideAttack.getParamValue());
+    }
 
-    /** @return message key prefix for fuzzer */
-    String getFuzzerMessagePrefix();
+    /**
+     * Raises Alert for all the fuzzers.
+     *
+     * @param messagePrefix
+     * @param vulnerabilityPrefix
+     * @param alertLevel
+     * @param confidenceLevel
+     * @param serverSideAttack
+     */
+    default void raiseAlert(
+            String messagePrefix,
+            String vulnerabilityPrefix,
+            int alertLevel,
+            int confidenceLevel,
+            ServerSideAttack serverSideAttack) {
+        serverSideAttack
+                .getJwtActiveScanner()
+                .bingo(
+                        alertLevel,
+                        confidenceLevel,
+                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".name"),
+                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".desc"),
+                        serverSideAttack.getMsg().getRequestHeader().getURI().toString(),
+                        serverSideAttack.getParam(),
+                        serverSideAttack.getParamValue(),
+                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".refs"),
+                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".soln"),
+                        serverSideAttack.getMsg());
+    }
+    /**
+     * Manipulates the JWT token and executes them, raise alert if it works
+     *
+     * @param serverSideAttack
+     * @return true if attack is successful.
+     */
+    boolean fuzzJWTTokens(ServerSideAttack serverSideAttack);
 }

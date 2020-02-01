@@ -22,15 +22,13 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NULL_BYTE_CHARACTER;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import net.sf.json.JSONException;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
+import org.parosproxy.paros.core.scanner.Alert;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
-import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
+import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 
 /**
  * TODO need to add more attacks based on Payloads. However it is tough to find payload attacks lets
@@ -42,17 +40,30 @@ public class PayloadFuzzer implements JWTFuzzer {
 
     private static final Logger LOGGER = Logger.getLogger(PayloadFuzzer.class);
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.payloadFuzzer.";
+    private ServerSideAttack serverSideAttack;
 
+    private boolean executeAttack(String fuzzedJWTToken) {
+        boolean result = executeAttack(fuzzedJWTToken, serverSideAttack);
+        if (result) {
+            raiseAlert(
+                    MESSAGE_PREFIX,
+                    "nullByte",
+                    Alert.RISK_HIGH,
+                    Alert.CONFIDENCE_HIGH,
+                    this.serverSideAttack);
+        }
+        return result;
+    }
     /**
      * @param jwtTokenBean
      * @param fuzzedTokens
      */
-    // Payload can be json or any other format as per specification
-    private void populateNullByteFuzzedPayload(
-            JWTTokenBean jwtTokenBean,
-            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens) {
+    private boolean executeNullByteFuzzedTokens() {
+        if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+            return false;
+        }
         String nullBytePayload = NULL_BYTE_CHARACTER + Constant.getEyeCatcher();
-        JWTTokenBean clonedJWTToken = new JWTTokenBean(jwtTokenBean);
+        JWTTokenBean clonedJWTToken = new JWTTokenBean(this.serverSideAttack.getJwtTokenBean());
         try {
             JSONObject payloadJsonObject = new JSONObject(clonedJWTToken.getPayload());
             for (String key : payloadJsonObject.keySet()) {
@@ -60,33 +71,26 @@ public class PayloadFuzzer implements JWTFuzzer {
                 if (originalKeyValue instanceof String) {
                     payloadJsonObject.put(key, originalKeyValue.toString() + nullBytePayload);
                     clonedJWTToken.setPayload(payloadJsonObject.toString());
-                    vulnerabilityTypeAndFuzzedTokens
-                            .computeIfAbsent(
-                                    VulnerabilityType.NULL_BYTE,
-                                    (vulnerabilityType) -> new ArrayList<String>())
-                            .add(clonedJWTToken.getToken());
+                    if (executeAttack(clonedJWTToken.getToken())) {
+                        return true;
+                    }
                     payloadJsonObject.put(key, originalKeyValue);
                 }
             }
         } catch (JSONException e) {
+            // Payload can be json or any other format as per specification
             LOGGER.error("Payload is not a valid JSON Object", e);
         } catch (UnsupportedEncodingException e) {
             LOGGER.error("Exception occurred while getting the base64 urlsafe encoded token", e);
         }
+        return false;
     }
 
     // TODO read
     // https://github.com/andresriancho/jwt-fuzzer/blob/master/jwtfuzzer/fuzzing_functions/payload_iss.py
     @Override
-    public LinkedHashMap<VulnerabilityType, List<String>> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens =
-                new LinkedHashMap<VulnerabilityType, List<String>>();
-        populateNullByteFuzzedPayload(jwtTokenBean, vulnerabilityTypeAndFuzzedTokens);
-        return vulnerabilityTypeAndFuzzedTokens;
-    }
-
-    @Override
-    public String getFuzzerMessagePrefix() {
-        return MESSAGE_PREFIX;
+    public boolean fuzzJWTTokens(ServerSideAttack serverSideAttack) {
+        this.serverSideAttack = serverSideAttack;
+        return executeNullByteFuzzedTokens();
     }
 }

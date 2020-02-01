@@ -36,7 +36,7 @@ import org.zaproxy.zap.extension.jwt.JWTActiveScanner;
  * @author preetkaran20@gmail.com KSASAN
  * @param <T>
  */
-public class BFAttack<T> {
+public class GenericAsyncTaskExecutor<T> {
 
     private Predicate<T> predicate;
     private Iterator<T> iterator;
@@ -44,9 +44,9 @@ public class BFAttack<T> {
     private JWTActiveScanner jwtActiveScanner;
     private boolean isAttackSuccessful = false;
 
-    private static final Logger LOGGER = Logger.getLogger(BFAttack.class);
+    private static final Logger LOGGER = Logger.getLogger(GenericAsyncTaskExecutor.class);
 
-    public BFAttack(
+    public GenericAsyncTaskExecutor(
             Predicate<T> predicate,
             Iterator<T> iterator,
             ExecutorService executorService,
