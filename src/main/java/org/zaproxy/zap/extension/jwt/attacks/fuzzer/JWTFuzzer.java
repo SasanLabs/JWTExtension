@@ -21,6 +21,7 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
 import org.zaproxy.zap.extension.jwt.JWTI18n;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
  * Common interface for all the jwt fuzzers.
@@ -51,22 +52,27 @@ public interface JWTFuzzer {
      */
     default void raiseAlert(
             String messagePrefix,
-            String vulnerabilityPrefix,
+            VulnerabilityType vulnerabilityType,
             int alertLevel,
             int confidenceLevel,
+            String jwtToken,
             ServerSideAttack serverSideAttack) {
         serverSideAttack
                 .getJwtActiveScanner()
                 .bingo(
                         alertLevel,
                         confidenceLevel,
-                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".name"),
-                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".desc"),
+                        JWTI18n.getMessage(
+                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".name"),
+                        JWTI18n.getMessage(
+                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".desc"),
                         serverSideAttack.getMsg().getRequestHeader().getURI().toString(),
                         serverSideAttack.getParam(),
-                        serverSideAttack.getParamValue(),
-                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".refs"),
-                        JWTI18n.getMessage(messagePrefix + "." + vulnerabilityPrefix + ".soln"),
+                        jwtToken,
+                        JWTI18n.getMessage(
+                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".refs"),
+                        JWTI18n.getMessage(
+                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".soln"),
                         serverSideAttack.getMsg());
     }
     /**

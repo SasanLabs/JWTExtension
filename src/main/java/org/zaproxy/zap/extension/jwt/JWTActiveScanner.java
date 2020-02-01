@@ -57,6 +57,26 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     public JWTActiveScanner() {}
 
     @Override
+    public void init() {
+        switch (this.getAttackStrength()) {
+            case LOW:
+                maxRequestCount = 12;
+                break;
+            case MEDIUM:
+                maxRequestCount = 25;
+                break;
+            case HIGH:
+                maxRequestCount = 50;
+                break;
+            case INSANE:
+                maxRequestCount = 100;
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
     public void scan(HttpMessage msg, String param, String value) {
         String newValue = value.trim();
         newValue = JWTUtils.extractingJWTFromParamValue(newValue);
@@ -81,23 +101,6 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             return;
         }
 
-        switch (this.getAttackStrength()) {
-            case LOW:
-                maxRequestCount = 8;
-                break;
-            case MEDIUM:
-                maxRequestCount = 12;
-                break;
-            case HIGH:
-                maxRequestCount = 25;
-                break;
-            case INSANE:
-                maxRequestCount = 50;
-                break;
-            default:
-                break;
-        }
-
         if (!JWTConfiguration.getInstance().isIgnoreClientConfigurationScan()) {
             if (performAttackClientSideConfigurations(msg, param, jwtTokenBean, value)) {
                 return;
@@ -108,7 +111,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     }
 
     public boolean isStop() {
-        return super.isStop() && (this.maxRequestCount <= 0);
+        return super.isStop() || (this.maxRequestCount <= 0);
     }
 
     public void decreaseRequestCount() {

@@ -23,9 +23,20 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.BASE64_PADDING_CH
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.BEARER_TOKEN_KEY;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.BEARER_TOKEN_REGEX;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HS256_ALGO_JAVA;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HMAC_ALGORITHM_IDENTIFIER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_ALGORITHM_IDENTIFIER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_PSS_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER_REGEX;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_REGEX_PATTERN;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -34,20 +45,27 @@ import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.text.ParseException;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.apache.log4j.Logger;
+import org.json.JSONObject;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
+import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 
 /** @author KSASAN preetkaran20@gmail.com */
 public class JWTUtils {
+
+    private static final Logger LOGGER = Logger.getLogger(JWTUtils.class);
 
     public static byte[] getBytes(String token) {
         return token.getBytes(StandardCharsets.UTF_8);
@@ -184,5 +202,39 @@ public class JWTUtils {
             jwtToken = BEARER_TOKEN_KEY + " " + jwtToken;
         }
         return jwtToken;
+    }
+
+    public static void handleSigningOfTokenCustomFieldFuzzer(
+            CustomFieldFuzzer customFieldFuzzer, JWTTokenBean clonedJWTokenBean)
+            throws ParseException, JOSEException, UnsupportedEncodingException {
+        JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
+        String algoType = headerJSONObject.getString(JWTConstants.JWT_ALGORITHM_KEY_HEADER);
+        if (algoType != null) {
+            if ((algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
+                    || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER))) {
+                // TODO key addition
+                JWSSigner signer = new RSASSASigner((PrivateKey) null);
+                SignedJWT signedJWT;
+
+                signedJWT =
+                        new SignedJWT(
+                                JWSHeader.parse(clonedJWTokenBean.getHeader()),
+                                JWTClaimsSet.parse(clonedJWTokenBean.getPayload()));
+                signedJWT.sign(signer);
+                clonedJWTokenBean.setSignature(signedJWT.getSignature().decode());
+
+            } else if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
+
+                // TODO key handling
+                MACSigner macSigner = new MACSigner("SOMEKEY");
+                String base64EncodedFuzzedHeaderAndPayload =
+                        clonedJWTokenBean.getTokenWithoutSignature();
+                Base64URL signedToken =
+                        macSigner.sign(
+                                JWSHeader.parse(clonedJWTokenBean.getHeader()),
+                                JWTUtils.getBytes(base64EncodedFuzzedHeaderAndPayload));
+                clonedJWTokenBean.setSignature(signedToken.decode());
+            }
+        }
     }
 }

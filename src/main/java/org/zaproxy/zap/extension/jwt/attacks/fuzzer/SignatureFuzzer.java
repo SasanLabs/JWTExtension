@@ -61,6 +61,7 @@ import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
+import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class SignatureFuzzer implements JWTFuzzer {
@@ -106,9 +107,10 @@ public class SignatureFuzzer implements JWTFuzzer {
         if (executeAttack(cloneJWTTokenBean.getToken(), serverSideAttack)) {
             raiseAlert(
                     MESSAGE_PREFIX,
-                    "jwkCustomKey",
+                    VulnerabilityType.JWK_CUSTOM_KEY,
                     Alert.RISK_MEDIUM,
                     Alert.CONFIDENCE_HIGH,
+                    cloneJWTTokenBean.getToken(),
                     serverSideAttack);
             return true;
         }
@@ -122,9 +124,10 @@ public class SignatureFuzzer implements JWTFuzzer {
         if (executeAttack(cloneJWTTokenBean.getToken(), serverSideAttack)) {
             raiseAlert(
                     MESSAGE_PREFIX,
-                    "jwkCustomKey",
+                    VulnerabilityType.JWK_CUSTOM_KEY,
                     Alert.RISK_HIGH,
                     Alert.CONFIDENCE_HIGH,
+                    cloneJWTTokenBean.getToken(),
                     serverSideAttack);
             return true;
         }
@@ -174,9 +177,10 @@ public class SignatureFuzzer implements JWTFuzzer {
             if (executeAttack(signedJWT.serialize(), serverSideAttack)) {
                 raiseAlert(
                         MESSAGE_PREFIX,
-                        "jwkCustomKey",
+                        VulnerabilityType.JWK_CUSTOM_KEY,
                         Alert.RISK_HIGH,
                         Alert.CONFIDENCE_HIGH,
+                        signedJWT.serialize(),
                         serverSideAttack);
                 return true;
             }
@@ -238,9 +242,10 @@ public class SignatureFuzzer implements JWTFuzzer {
                                 if (executeAttack(clonedJWTokenBean.getToken(), serverSideAttack)) {
                                     raiseAlert(
                                             MESSAGE_PREFIX,
-                                            "algorithmConfusion",
+                                            VulnerabilityType.ALGORITHM_CONFUSION,
                                             Alert.RISK_HIGH,
                                             Alert.CONFIDENCE_HIGH,
+                                            clonedJWTokenBean.getToken(),
                                             serverSideAttack);
                                     return true;
                                 }

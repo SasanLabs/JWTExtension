@@ -25,12 +25,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.apache.log4j.Logger;
 import org.zaproxy.zap.extension.jwt.JWTActiveScanner;
+import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 
 /**
  * @author preetkaran20@gmail.com KSASAN
@@ -47,13 +49,11 @@ public class GenericAsyncTaskExecutor<T> {
     private static final Logger LOGGER = Logger.getLogger(GenericAsyncTaskExecutor.class);
 
     public GenericAsyncTaskExecutor(
-            Predicate<T> predicate,
-            Iterator<T> iterator,
-            ExecutorService executorService,
-            JWTActiveScanner jwtActiveScanner) {
+            Predicate<T> predicate, Iterator<T> iterator, JWTActiveScanner jwtActiveScanner) {
         this.predicate = predicate;
         this.iterator = iterator;
-        this.executorService = executorService;
+        int threadCount = JWTConfiguration.getInstance().getThreadCount();
+        this.executorService = Executors.newFixedThreadPool(threadCount);
         this.jwtActiveScanner = jwtActiveScanner;
     }
 
@@ -61,12 +61,9 @@ public class GenericAsyncTaskExecutor<T> {
         Supplier<Void> attackTask =
                 () -> {
                     if (isStop()) {
-                        LOGGER.info(
-                                "Stopping because either attack is successfull or user has manually stopped the execution");
                         return null;
                     }
                     isAttackSuccessful = predicate.test(value);
-                    jwtActiveScanner.decreaseRequestCount();
                     return null;
                 };
         return CompletableFuture.supplyAsync(attackTask, this.executorService);
@@ -74,6 +71,8 @@ public class GenericAsyncTaskExecutor<T> {
 
     private boolean isStop() {
         if (isAttackSuccessful || this.jwtActiveScanner.isStop()) {
+        	LOGGER.info(
+                    "Stopping because either attack is successfull or user has manually stopped the execution");
             return true;
         }
         return false;
@@ -93,15 +92,23 @@ public class GenericAsyncTaskExecutor<T> {
     }
 
     public boolean execute() {
-        if (iterator != null) {
-            List<CompletableFuture<?>> completableFutures = new ArrayList<>();
-            while (iterator.hasNext()) {
-                if (!isStop()) {
-                    this.executeTaskAsync(iterator.next());
+        try {
+        	if (isStop()) {
+                return isAttackSuccessful;
+        	}
+            if (iterator != null) {
+                List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+                while (iterator.hasNext()) {
+                	T value = iterator.next();
+                    if (!isStop()) {
+                        completableFutures.add(this.executeTaskAsync(value));
+                    }
                 }
+                waitForCompletion(completableFutures);
             }
-            waitForCompletion(completableFutures);
+            return isAttackSuccessful;
+        } finally {
+            executorService.shutdown();
         }
-        return isAttackSuccessful;
     }
 }
