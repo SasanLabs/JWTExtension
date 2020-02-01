@@ -25,6 +25,7 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EXP_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_ALGORITHM_IDENTIFIER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_PSS_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NULL_BYTE_CHARACTER;
 
@@ -49,18 +50,17 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
+import org.parosproxy.paros.core.scanner.Alert;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
+import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
-import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /** @author preetkaran20@gmail.com KSASAN */
 public class SignatureFuzzer implements JWTFuzzer {
@@ -69,66 +69,90 @@ public class SignatureFuzzer implements JWTFuzzer {
 
     private static final String MESSAGE_PREFIX =
             "jwt.scanner.server.vulnerability.signatureFuzzer.";
+    private ServerSideAttack serverSideAttack;
 
     /**
-     * Adds Null Byte to the signature to check if JWT is vulnerable to Null Byte injection
+     * Adds Null Byte to the signature to checks if JWT is vulnerable to Null Byte injection. Main
+     * gist of attack is say validator is vulnerable to null byte hence if anything is appended
+     * after null byte will be ignored.
      *
-     * @param jwtTokenBean
-     * @return Null Byte fuzzed token
      * @throws UnsupportedEncodingException
      */
-    private void addNullByteFuzzedTokens(
-            JWTTokenBean jwtTokenBean,
-            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens)
-            throws UnsupportedEncodingException {
+    private boolean executeNullByteFuzzTokens() throws UnsupportedEncodingException {
         // Appends signature with NullByte plus ZAP eyeCather.
-        JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(jwtTokenBean);
+        JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(this.serverSideAttack.getJwtTokenBean());
         byte[] nullByteAddedPayload =
                 JWTUtils.getBytes(NULL_BYTE_CHARACTER + Constant.getEyeCatcher());
         byte[] newSignature =
-                new byte[jwtTokenBean.getSignature().length + nullByteAddedPayload.length];
+                new byte[cloneJWTTokenBean.getSignature().length + nullByteAddedPayload.length];
         System.arraycopy(
-                jwtTokenBean.getSignature(),
+                this.serverSideAttack.getJwtTokenBean().getSignature(),
                 0,
                 newSignature,
                 0,
-                jwtTokenBean.getSignature().length);
+                this.serverSideAttack.getJwtTokenBean().getSignature().length);
         System.arraycopy(
                 nullByteAddedPayload,
                 0,
                 newSignature,
-                jwtTokenBean.getSignature().length,
+                this.serverSideAttack.getJwtTokenBean().getSignature().length,
                 nullByteAddedPayload.length);
         cloneJWTTokenBean.setSignature(newSignature);
-        vulnerabilityTypeAndFuzzedTokens.put(VulnerabilityType.NULL_BYTE, new ArrayList<String>());
-        vulnerabilityTypeAndFuzzedTokens
-                .get(VulnerabilityType.NULL_BYTE)
-                .add(cloneJWTTokenBean.getToken());
+
+        if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+            return false;
+        }
+
+        if (executeAttack(cloneJWTTokenBean.getToken(), serverSideAttack)) {
+            raiseAlert(
+                    MESSAGE_PREFIX,
+                    "jwkCustomKey",
+                    Alert.RISK_MEDIUM,
+                    Alert.CONFIDENCE_HIGH,
+                    serverSideAttack);
+            return true;
+        }
+
+        if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+            return false;
+        }
 
         // Replaces the signature with NullByte.
         cloneJWTTokenBean.setSignature(JWTUtils.getBytes(NULL_BYTE_CHARACTER));
-        vulnerabilityTypeAndFuzzedTokens
-                .get(VulnerabilityType.NULL_BYTE)
-                .add(cloneJWTTokenBean.getToken());
+        if (executeAttack(cloneJWTTokenBean.getToken(), serverSideAttack)) {
+            raiseAlert(
+                    MESSAGE_PREFIX,
+                    "jwkCustomKey",
+                    Alert.RISK_HIGH,
+                    Alert.CONFIDENCE_HIGH,
+                    serverSideAttack);
+            return true;
+        }
+        return false;
     }
 
     /**
-     * Payload is as per the https://nvd.nist.gov/vuln/detail/CVE-2018-0114 vulnerability
+     * Payload is as per the {@link https://nvd.nist.gov/vuln/detail/CVE-2018-0114} vulnerability
      *
      * @param jwtTokenBean
      * @param vulnerabilityTypeAndFuzzedTokens
      * @throws NoSuchAlgorithmException
      * @throws JOSEException
      * @throws ParseException
+     *     <p>TODO Add attack based on Elliptical curve algorithm.
      */
-    public void populateTokenSignedWithCustomPrivateKey(
-            JWTTokenBean jwtTokenBean,
-            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens)
+    public boolean executeCustomPrivateKeySignedFuzzToken()
             throws NoSuchAlgorithmException, JOSEException, ParseException {
-        JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
-        JSONObject payloadJSONObject = new JSONObject(jwtTokenBean.getPayload());
+        JSONObject headerJSONObject =
+                new JSONObject(this.serverSideAttack.getJwtTokenBean().getHeader());
+        JSONObject payloadJSONObject =
+                new JSONObject(this.serverSideAttack.getJwtTokenBean().getPayload());
         String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
-        if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
+        if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
+                || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER)) {
+            if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+                return false;
+            }
             long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
             expiryTimeInMillis = expiryTimeInMillis + 2000;
             payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
@@ -137,7 +161,8 @@ public class SignatureFuzzer implements JWTFuzzer {
             RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
             rsaKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
             RSAKey rsaKey = rsaKeyGenerator.generate();
-            headerJSONObject.put(JSON_WEB_KEY_HEADER, rsaKey.toJSONObject());
+
+            headerJSONObject.put(JSON_WEB_KEY_HEADER, rsaKey.toPublicJWK().toJSONObject());
 
             // Getting base64 encoded signed token
             JWSSigner signer = new RSASSASigner(rsaKey);
@@ -146,18 +171,21 @@ public class SignatureFuzzer implements JWTFuzzer {
                             JWSHeader.parse(headerJSONObject.toString()),
                             JWTClaimsSet.parse(payloadJSONObject.toString()));
             signedJWT.sign(signer);
-            vulnerabilityTypeAndFuzzedTokens
-                    .computeIfAbsent(
-                            VulnerabilityType.JWK_CUSTOM_KEY,
-                            (vulnerabilityType) -> new ArrayList<String>())
-                    .add(signedJWT.serialize());
+            if (executeAttack(signedJWT.serialize(), serverSideAttack)) {
+                raiseAlert(
+                        MESSAGE_PREFIX,
+                        "jwkCustomKey",
+                        Alert.RISK_HIGH,
+                        Alert.CONFIDENCE_HIGH,
+                        serverSideAttack);
+                return true;
+            }
         }
+        return false;
     }
 
     /**
-     * Returns Fuzzed token by confusing algo keys.
-     *
-     * <p>Background about the attack:<br>
+     * Background about the attack:<br>
      * Say an application is using RSA to sign JWT now what will be the verification method {@code
      * verify(String jwtToken, byte[] key); }
      *
@@ -165,13 +193,8 @@ public class SignatureFuzzer implements JWTFuzzer {
      * case jwttoken is based on HMAC algorithm then verify method will think key as Secret key for
      * HMAC and will try to decrypt it and as public key is known to everyone so anyone can sign the
      * key with public key and HMAC will accept it.
-     *
-     * @param jwtTokenBean
-     * @param vulnerabilityTypeAndFuzzedTokens
      */
-    private void getAlgoKeyConfusionFuzzedToken(
-            JWTTokenBean jwtTokenBean,
-            LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens) {
+    private boolean executeAlgoKeyConfusionFuzzedToken() {
         try {
             KeyStore keyStore = KeyStore.getInstance("JKS");
             String trustStorePath = JWTConfiguration.getInstance().getTrustStorePath();
@@ -185,7 +208,9 @@ public class SignatureFuzzer implements JWTFuzzer {
 
                 JWKSet jwkSet = JWKSet.load(keyStore, null);
                 List<JWK> trustedKeys = jwkSet.getKeys();
-                JSONObject jwtHeaderJSON = new JSONObject(jwtTokenBean.getHeader());
+                JWTTokenBean clonedJWTokenBean =
+                        new JWTTokenBean(this.serverSideAttack.getJwtTokenBean());
+                JSONObject jwtHeaderJSON = new JSONObject(clonedJWTokenBean.getHeader());
                 String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
                 if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
                     String jwtFuzzedHeader =
@@ -194,8 +219,11 @@ public class SignatureFuzzer implements JWTFuzzer {
                             JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(jwtFuzzedHeader)
                                     + JWT_TOKEN_PERIOD_CHARACTER
                                     + JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
-                                            jwtTokenBean.getPayload());
+                                            clonedJWTokenBean.getPayload());
                     for (JWK jwk : trustedKeys) {
+                        if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+                            return false;
+                        }
                         try {
                             if (jwk instanceof RSAKey) {
                                 MACSigner macSigner =
@@ -205,12 +233,17 @@ public class SignatureFuzzer implements JWTFuzzer {
                                                 JWSHeader.parse(jwtFuzzedHeader),
                                                 JWTUtils.getBytes(
                                                         base64EncodedFuzzedHeaderAndPayload));
-                                jwtTokenBean.setSignature(signedToken.decode());
-                                vulnerabilityTypeAndFuzzedTokens
-                                        .put(
-                                                VulnerabilityType.ALGORITHM_CONFUSION,
-                                                new ArrayList<String>())
-                                        .add(jwtTokenBean.getToken());
+                                clonedJWTokenBean.setSignature(signedToken.decode());
+
+                                if (executeAttack(clonedJWTokenBean.getToken(), serverSideAttack)) {
+                                    raiseAlert(
+                                            MESSAGE_PREFIX,
+                                            "algorithmConfusion",
+                                            Alert.RISK_HIGH,
+                                            Alert.CONFIDENCE_HIGH,
+                                            serverSideAttack);
+                                    return true;
+                                }
                             }
                         } catch (JOSEException | ParseException e) {
                             LOGGER.error(
@@ -226,17 +259,16 @@ public class SignatureFuzzer implements JWTFuzzer {
                 | IOException e) {
             LOGGER.error("Exception occurred while getting fuzzed token for confusion scenario", e);
         }
+        return false;
     }
 
     @Override
-    public LinkedHashMap<VulnerabilityType, List<String>> fuzzedTokens(JWTTokenBean jwtTokenBean) {
-        LinkedHashMap<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens =
-                new LinkedHashMap<VulnerabilityType, List<String>>();
+    public boolean fuzzJWTTokens(ServerSideAttack serverSideAttack) {
+        this.serverSideAttack = serverSideAttack;
         try {
-            this.populateTokenSignedWithCustomPrivateKey(
-                    jwtTokenBean, vulnerabilityTypeAndFuzzedTokens);
-            this.getAlgoKeyConfusionFuzzedToken(jwtTokenBean, vulnerabilityTypeAndFuzzedTokens);
-            this.addNullByteFuzzedTokens(jwtTokenBean, vulnerabilityTypeAndFuzzedTokens);
+            return this.executeCustomPrivateKeySignedFuzzToken()
+                    || this.executeAlgoKeyConfusionFuzzedToken()
+                    || this.executeNullByteFuzzTokens();
         } catch (NoSuchAlgorithmException
                 | JSONException
                 | IOException
@@ -244,11 +276,6 @@ public class SignatureFuzzer implements JWTFuzzer {
                 | ParseException e) {
             LOGGER.error("error occurred while getting signed fuzzed tokens", e);
         }
-        return vulnerabilityTypeAndFuzzedTokens;
-    }
-
-    @Override
-    public String getFuzzerMessagePrefix() {
-        return MESSAGE_PREFIX;
+        return false;
     }
 }

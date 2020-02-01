@@ -19,21 +19,16 @@
  */
 package org.zaproxy.zap.extension.jwt.attacks;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import org.apache.commons.collections.MapUtils;
-import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.zap.extension.jwt.JWTActiveScanner;
-import org.zaproxy.zap.extension.jwt.JWTI18n;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.attacks.fuzzer.HeaderFuzzer;
 import org.zaproxy.zap.extension.jwt.attacks.fuzzer.JWTFuzzer;
 import org.zaproxy.zap.extension.jwt.attacks.fuzzer.MiscFuzzer;
 import org.zaproxy.zap.extension.jwt.attacks.fuzzer.PayloadFuzzer;
 import org.zaproxy.zap.extension.jwt.attacks.fuzzer.SignatureFuzzer;
-import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
  * Finds vulnerabilities in server side implementation and configuration of JWT.
@@ -46,27 +41,12 @@ public class ServerSideAttack {
     private String paramValue;
     private HttpMessage msg;
     private JWTTokenBean jwtTokenBean;
-    private List<JWTFuzzer> fuzzers = new ArrayList<JWTFuzzer>();
-
-    private void raiseAlert(
-            String messagePrefix,
-            int risk,
-            int confidence,
-            String param,
-            String value,
-            HttpMessage msg) {
-        this.jwtActiveScanner.bingo(
-                risk,
-                confidence,
-                JWTI18n.getMessage(messagePrefix + ".name"),
-                JWTI18n.getMessage(messagePrefix + ".desc"),
-                msg.getRequestHeader().getURI().toString(),
-                param,
-                value,
-                JWTI18n.getMessage(messagePrefix + ".refs"),
-                JWTI18n.getMessage(messagePrefix + ".soln"),
-                msg);
-    }
+    private static final List<JWTFuzzer> FUZZERS =
+            Arrays.asList(
+                    new HeaderFuzzer(),
+                    new PayloadFuzzer(),
+                    new SignatureFuzzer(),
+                    new MiscFuzzer());
 
     /**
      * @param jwtTokenBean Parsed JWT Token Bean
@@ -86,50 +66,38 @@ public class ServerSideAttack {
         this.msg = msg;
         this.jwtTokenBean = jwtTokenBean;
         this.paramValue = paramValue;
-        fuzzers.add(new HeaderFuzzer());
-        fuzzers.add(new PayloadFuzzer());
-        fuzzers.add(new SignatureFuzzer());
-        fuzzers.add(new MiscFuzzer());
+    }
+
+    public JWTActiveScanner getJwtActiveScanner() {
+        return jwtActiveScanner;
+    }
+
+    public String getParam() {
+        return param;
+    }
+
+    public String getParamValue() {
+        return paramValue;
+    }
+
+    public HttpMessage getMsg() {
+        return msg;
+    }
+
+    public JWTTokenBean getJwtTokenBean() {
+        return jwtTokenBean;
     }
 
     public boolean execute() {
-        boolean result = false;
-
-        for (JWTFuzzer jwtFuzzer : fuzzers) {
-            // Clone is passed so fuzzers can modify passed TokenBean
-            Map<VulnerabilityType, List<String>> vulnerabilityTypeAndFuzzedTokens =
-                    jwtFuzzer.fuzzedTokens(new JWTTokenBean(jwtTokenBean));
-            if (MapUtils.isNotEmpty(vulnerabilityTypeAndFuzzedTokens)) {
-                for (Map.Entry<VulnerabilityType, List<String>>
-                        vulnerabilityTypeAndFuzzedTokenEntry :
-                                vulnerabilityTypeAndFuzzedTokens.entrySet()) {
-                    for (String jwtFuzzedToken : vulnerabilityTypeAndFuzzedTokenEntry.getValue()) {
-                        if (this.jwtActiveScanner.isStop()) {
-                            return result;
-                        }
-                        result =
-                                this.jwtActiveScanner.sendFuzzedMsgAndCheckIfAttackSuccessful(
-                                        msg, param, jwtFuzzedToken, this.paramValue);
-                        this.jwtActiveScanner.decreaseRequestCount();
-                        if (result) {
-                            // Now create the alert message
-                            this.raiseAlert(
-                                    jwtFuzzer.getFuzzerMessagePrefix()
-                                            + vulnerabilityTypeAndFuzzedTokenEntry
-                                                    .getKey()
-                                                    .getMessageKey(),
-                                    Alert.RISK_HIGH,
-                                    Alert.CONFIDENCE_HIGH,
-                                    this.param,
-                                    jwtFuzzedToken,
-                                    msg);
-                            return result;
-                        }
-                    }
+        for (JWTFuzzer jwtFuzzer : FUZZERS) {
+            if (this.jwtActiveScanner.isStop()) {
+                return false;
+            } else {
+                if (jwtFuzzer.fuzzJWTTokens(this)) {
+                    return true;
                 }
             }
         }
-
-        return result;
+        return false;
     }
 }
