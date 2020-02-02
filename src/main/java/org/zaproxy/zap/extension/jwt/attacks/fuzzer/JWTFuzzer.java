@@ -63,16 +63,16 @@ public interface JWTFuzzer {
                         alertLevel,
                         confidenceLevel,
                         JWTI18n.getMessage(
-                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".name"),
+                                messagePrefix + vulnerabilityType.getMessageKey() + ".name"),
                         JWTI18n.getMessage(
-                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".desc"),
+                                messagePrefix + vulnerabilityType.getMessageKey() + ".desc"),
                         serverSideAttack.getMsg().getRequestHeader().getURI().toString(),
                         serverSideAttack.getParam(),
                         jwtToken,
                         JWTI18n.getMessage(
-                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".refs"),
+                                messagePrefix + vulnerabilityType.getMessageKey() + ".refs"),
                         JWTI18n.getMessage(
-                                messagePrefix + "." + vulnerabilityType.getMessageKey() + ".soln"),
+                                messagePrefix + vulnerabilityType.getMessageKey() + ".soln"),
                         serverSideAttack.getMsg());
     }
     /**

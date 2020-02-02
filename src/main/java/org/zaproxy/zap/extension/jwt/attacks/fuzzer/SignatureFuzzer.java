@@ -82,32 +82,16 @@ public class SignatureFuzzer implements JWTFuzzer {
     private boolean executeNullByteFuzzTokens() throws UnsupportedEncodingException {
         // Appends signature with NullByte plus ZAP eyeCather.
         JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(this.serverSideAttack.getJwtTokenBean());
-        byte[] nullByteAddedPayload =
-                JWTUtils.getBytes(NULL_BYTE_CHARACTER + Constant.getEyeCatcher());
-        byte[] newSignature =
-                new byte[cloneJWTTokenBean.getSignature().length + nullByteAddedPayload.length];
-        System.arraycopy(
-                this.serverSideAttack.getJwtTokenBean().getSignature(),
-                0,
-                newSignature,
-                0,
-                this.serverSideAttack.getJwtTokenBean().getSignature().length);
-        System.arraycopy(
-                nullByteAddedPayload,
-                0,
-                newSignature,
-                this.serverSideAttack.getJwtTokenBean().getSignature().length,
-                nullByteAddedPayload.length);
-        cloneJWTTokenBean.setSignature(newSignature);
-
         if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
             return false;
         }
 
-        if (executeAttack(cloneJWTTokenBean.getToken(), serverSideAttack)) {
+        if (executeAttack(
+                cloneJWTTokenBean.getToken() + NULL_BYTE_CHARACTER + Constant.getEyeCatcher(),
+                serverSideAttack)) {
             raiseAlert(
                     MESSAGE_PREFIX,
-                    VulnerabilityType.JWK_CUSTOM_KEY,
+                    VulnerabilityType.NULL_BYTE,
                     Alert.RISK_MEDIUM,
                     Alert.CONFIDENCE_HIGH,
                     cloneJWTTokenBean.getToken(),
@@ -124,7 +108,7 @@ public class SignatureFuzzer implements JWTFuzzer {
         if (executeAttack(cloneJWTTokenBean.getToken(), serverSideAttack)) {
             raiseAlert(
                     MESSAGE_PREFIX,
-                    VulnerabilityType.JWK_CUSTOM_KEY,
+                    VulnerabilityType.NULL_BYTE,
                     Alert.RISK_HIGH,
                     Alert.CONFIDENCE_HIGH,
                     cloneJWTTokenBean.getToken(),

@@ -71,7 +71,7 @@ public class GenericAsyncTaskExecutor<T> {
 
     private boolean isStop() {
         if (isAttackSuccessful || this.jwtActiveScanner.isStop()) {
-        	LOGGER.info(
+            LOGGER.info(
                     "Stopping because either attack is successfull or user has manually stopped the execution");
             return true;
         }
@@ -93,13 +93,13 @@ public class GenericAsyncTaskExecutor<T> {
 
     public boolean execute() {
         try {
-        	if (isStop()) {
+            if (isStop()) {
                 return isAttackSuccessful;
-        	}
+            }
             if (iterator != null) {
                 List<CompletableFuture<?>> completableFutures = new ArrayList<>();
                 while (iterator.hasNext()) {
-                	T value = iterator.next();
+                    T value = iterator.next();
                     if (!isStop()) {
                         completableFutures.add(this.executeTaskAsync(value));
                     }

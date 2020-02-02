@@ -72,7 +72,7 @@ public class BruteforceAttack {
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
     private String secretKeyCharacters = "abc";
     private int hmacMaxKeyLength = DEFAULT_SECRET_KEY_CHARACTERS.length();
-    private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.bruteForce.";
+    private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.";
 
     private JWTTokenBean jwtTokenBean;
     private JWTActiveScanner jwtActiveScanner;
@@ -103,28 +103,16 @@ public class BruteforceAttack {
                 Alert.RISK_HIGH,
                 Alert.CONFIDENCE_HIGH,
                 JWTI18n.getMessage(
-                        MESSAGE_PREFIX
-                                + "."
-                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
-                                + ".name"),
+                        MESSAGE_PREFIX + VulnerabilityType.BRUTE_FORCE.getMessageKey() + ".name"),
                 JWTI18n.getMessage(
-                        MESSAGE_PREFIX
-                                + "."
-                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
-                                + ".desc"),
+                        MESSAGE_PREFIX + VulnerabilityType.BRUTE_FORCE.getMessageKey() + ".desc"),
                 this.msg.getRequestHeader().getURI().toString(),
                 this.param,
                 secretKey,
                 JWTI18n.getMessage(
-                        MESSAGE_PREFIX
-                                + "."
-                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
-                                + ".refs"),
+                        MESSAGE_PREFIX + VulnerabilityType.BRUTE_FORCE.getMessageKey() + ".refs"),
                 JWTI18n.getMessage(
-                        MESSAGE_PREFIX
-                                + "."
-                                + VulnerabilityType.BRUTE_FORCE.getMessageKey()
-                                + ".soln"),
+                        MESSAGE_PREFIX + VulnerabilityType.BRUTE_FORCE.getMessageKey() + ".soln"),
                 this.msg);
     }
 
@@ -192,6 +180,7 @@ public class BruteforceAttack {
                                 JWTUtils.getBase64EncodedHMACSignedToken(
                                         JWTUtils.getBytes(tokenToBeSigned),
                                         JWTUtils.getBytes(secretKey));
+                        this.jwtActiveScanner.decreaseRequestCount();
                         if (base64EncodedSignature.equals(
                                 JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
                                         this.jwtTokenBean.getSignature()))) {
