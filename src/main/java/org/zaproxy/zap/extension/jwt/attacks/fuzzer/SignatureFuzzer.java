@@ -140,9 +140,11 @@ public class SignatureFuzzer implements JWTFuzzer {
             if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
                 return false;
             }
-            long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
-            expiryTimeInMillis = expiryTimeInMillis + 2000;
-            payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
+            if(payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
+            	long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
+            	expiryTimeInMillis = expiryTimeInMillis + 2000;
+            	payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
+            }
 
             // Generating JWK
             RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
