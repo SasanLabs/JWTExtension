@@ -20,6 +20,7 @@
 package org.zaproxy.zap.extension.jwt;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
 import org.parosproxy.paros.network.HttpMessage;
@@ -52,7 +53,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     private static final String NAME = JWTI18n.getMessage("ascanrules.jwt.name");
     private static final String DESCRIPTION = JWTI18n.getMessage("ascanrules.jwt.description");
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
-    private int maxRequestCount = 0;
+    private AtomicInteger maxRequestCount = new AtomicInteger(0);
 
     public JWTActiveScanner() {}
 
@@ -60,16 +61,16 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     public void init() {
         switch (this.getAttackStrength()) {
             case LOW:
-                maxRequestCount = 12;
+                maxRequestCount = new AtomicInteger(12);
                 break;
             case MEDIUM:
-                maxRequestCount = 25;
+                maxRequestCount = new AtomicInteger(25);
                 break;
             case HIGH:
-                maxRequestCount = 50;
+                maxRequestCount = new AtomicInteger(50);
                 break;
             case INSANE:
-                maxRequestCount = 100;
+                maxRequestCount = new AtomicInteger(100);
                 break;
             default:
                 break;
@@ -111,11 +112,11 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     }
 
     public boolean isStop() {
-        return super.isStop() || (this.maxRequestCount <= 0);
+        return super.isStop() || (this.maxRequestCount.get() <= 0);
     }
 
     public void decreaseRequestCount() {
-        this.maxRequestCount--;
+        this.maxRequestCount.decrementAndGet();
     }
 
     /**
