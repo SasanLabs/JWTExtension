@@ -43,7 +43,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.spec.InvalidKeySpecException;
 import java.text.ParseException;
 import java.util.Base64;
 import java.util.Objects;
@@ -140,22 +139,6 @@ public class JWTUtils {
 
         return jwtTokenBean;
     }
-
-    /**
-     * @returns RSA public key as per the JWT Configuration.
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeySpecException
-     * @throws IOException
-     */
-    //    public static PublicKey getRSAPublicKey()
-    //            throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
-    //        // TODO if public key at path is not present
-    //        String publicKeyPath = JWTConfiguration.getInstance().getTrustStorePath();
-    //        byte[] publicKeyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
-    //        X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
-    //        KeyFactory kf = KeyFactory.getInstance("RSA");
-    //        return kf.generatePublic(spec);
-    //    }
 
     public static String getBase64EncodedHMACSignedToken(byte[] token, byte[] secretKey)
             throws JWTExtensionValidationException, UnsupportedEncodingException {
