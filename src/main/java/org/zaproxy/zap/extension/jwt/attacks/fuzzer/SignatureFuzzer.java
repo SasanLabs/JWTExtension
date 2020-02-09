@@ -22,8 +22,10 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HMAC_256;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JSON_WEB_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY_HEADER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EC_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EXP_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_OCTET_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_PSS_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER;
@@ -33,8 +35,15 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.Ed25519Signer;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.OctetKeyPair;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -116,6 +125,27 @@ public class SignatureFuzzer implements JWTFuzzer {
         return false;
     }
 
+    private boolean signJWTAndExecuteAttack(
+            JWSSigner jwsSigner, JSONObject headerJSONObject, JSONObject payloadJSONObject)
+            throws JOSEException, ParseException {
+        SignedJWT signedJWT =
+                new SignedJWT(
+                        JWSHeader.parse(headerJSONObject.toString()),
+                        JWTClaimsSet.parse(payloadJSONObject.toString()));
+        signedJWT.sign(jwsSigner);
+        if (executeAttack(signedJWT.serialize(), serverSideAttack)) {
+            raiseAlert(
+                    MESSAGE_PREFIX,
+                    VulnerabilityType.JWK_CUSTOM_KEY,
+                    Alert.RISK_HIGH,
+                    Alert.CONFIDENCE_HIGH,
+                    signedJWT.serialize(),
+                    serverSideAttack);
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Payload is as per the {@link https://nvd.nist.gov/vuln/detail/CVE-2018-0114} vulnerability
      *
@@ -124,7 +154,6 @@ public class SignatureFuzzer implements JWTFuzzer {
      * @throws NoSuchAlgorithmException
      * @throws JOSEException
      * @throws ParseException
-     *     <p>TODO Add attack based on Elliptical curve algorithm.
      */
     public boolean executeCustomPrivateKeySignedFuzzToken()
             throws NoSuchAlgorithmException, JOSEException, ParseException {
@@ -133,40 +162,54 @@ public class SignatureFuzzer implements JWTFuzzer {
         JSONObject payloadJSONObject =
                 new JSONObject(this.serverSideAttack.getJwtTokenBean().getPayload());
         String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
+
+        if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
+            return false;
+        }
+
+        if (payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
+            long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
+            expiryTimeInMillis = expiryTimeInMillis + 2000;
+            payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
+        }
+
         if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
                 || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER)) {
-            if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
-                return false;
-            }
-            if (payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
-                long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
-                expiryTimeInMillis = expiryTimeInMillis + 2000;
-                payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
-            }
-
             // Generating JWK
             RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
             rsaKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
             RSAKey rsaKey = rsaKeyGenerator.generate();
 
             headerJSONObject.put(JSON_WEB_KEY_HEADER, rsaKey.toPublicJWK().toJSONObject());
-
-            // Getting base64 encoded signed token
-            JWSSigner signer = new RSASSASigner(rsaKey);
-            SignedJWT signedJWT =
-                    new SignedJWT(
-                            JWSHeader.parse(headerJSONObject.toString()),
-                            JWTClaimsSet.parse(payloadJSONObject.toString()));
-            signedJWT.sign(signer);
-            if (executeAttack(signedJWT.serialize(), serverSideAttack)) {
-                raiseAlert(
-                        MESSAGE_PREFIX,
-                        VulnerabilityType.JWK_CUSTOM_KEY,
-                        Alert.RISK_HIGH,
-                        Alert.CONFIDENCE_HIGH,
-                        signedJWT.serialize(),
-                        serverSideAttack);
+            if (signJWTAndExecuteAttack(
+                    new RSASSASigner(rsaKey), headerJSONObject, payloadJSONObject)) {
                 return true;
+            }
+        } else if (algoType.startsWith(JWT_EC_ALGORITHM_IDENTIFIER)
+                || algoType.startsWith(JWT_OCTET_ALGORITHM_IDENTIFIER)) {
+            for (Curve curve : Curve.forJWSAlgorithm(JWSAlgorithm.parse(algoType))) {
+                if (curve == null) {
+                    continue;
+                }
+                // Generating JWK
+                JWSSigner jwsSigner = null;
+                if (algoType.startsWith(JWT_EC_ALGORITHM_IDENTIFIER)) {
+                    ECKeyGenerator ecKeyGenerator = new ECKeyGenerator(curve);
+                    ecKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
+                    ECKey ecKey = ecKeyGenerator.generate();
+                    headerJSONObject.put(JSON_WEB_KEY_HEADER, ecKey.toPublicJWK().toJSONObject());
+                    jwsSigner = new ECDSASigner(ecKey);
+                } else {
+                    OctetKeyPairGenerator octetKeyPairGenerator = new OctetKeyPairGenerator(curve);
+                    octetKeyPairGenerator.algorithm(JWSAlgorithm.parse(algoType));
+                    OctetKeyPair octetKey = octetKeyPairGenerator.generate();
+                    headerJSONObject.put(
+                            JSON_WEB_KEY_HEADER, octetKey.toPublicJWK().toJSONObject());
+                    jwsSigner = new Ed25519Signer(octetKey);
+                }
+                if (this.signJWTAndExecuteAttack(jwsSigner, headerJSONObject, payloadJSONObject)) {
+                    return true;
+                }
             }
         }
         return false;
