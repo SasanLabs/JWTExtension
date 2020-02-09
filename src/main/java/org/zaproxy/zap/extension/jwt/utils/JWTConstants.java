@@ -39,6 +39,8 @@ public interface JWTConstants {
     String JWT_RSA_ALGORITHM_IDENTIFIER = "RS";
     String JWT_RSA_PSS_ALGORITHM_IDENTIFIER = "PS";
     String JWT_HMAC_ALGORITHM_IDENTIFIER = "HS";
+    String JWT_EC_ALGORITHM_IDENTIFIER = "EC";
+    String JWT_OCTET_ALGORITHM_IDENTIFIER = "ED";
     String JWT_EXP_ALGORITHM_IDENTIFIER = "exp";
     String JSON_WEB_KEY_HEADER = "jwk";
     String JWK_SET_URL_HEADER = "jku";
