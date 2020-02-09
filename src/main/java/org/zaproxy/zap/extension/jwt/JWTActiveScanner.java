@@ -28,6 +28,7 @@ import org.zaproxy.zap.extension.jwt.attacks.BruteforceAttack;
 import org.zaproxy.zap.extension.jwt.attacks.ClientSideAttack;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
+import org.zaproxy.zap.model.TechSet;
 
 /**
  * JWT plugin used to find the vulnerabilities in JWT implementations. Resources containing more
@@ -229,11 +230,30 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
     @Override
     public String getSolution() {
-        return null;
+        return "";
     }
 
     @Override
     public String getReference() {
-        return null;
+        return "";
+    }
+
+    @Override
+    public int getCweId() {
+        return 89;
+    }
+
+    @Override
+    public int getWascId() {
+        return 19;
+    }
+
+    @Override
+    public TechSet getTechSet() {
+        TechSet techSet = super.getTechSet();
+        if (techSet != null) {
+            return techSet;
+        }
+        return TechSet.AllTech;
     }
 }

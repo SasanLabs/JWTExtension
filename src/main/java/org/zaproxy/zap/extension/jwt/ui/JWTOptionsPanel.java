@@ -20,6 +20,7 @@
 package org.zaproxy.zap.extension.jwt.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -92,7 +93,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                         settingsPanel,
                         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                         ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        settingsScrollPane.setMinimumSize(this.getMaximumSize());
+        settingsScrollPane.setPreferredSize(new Dimension(500, 425));
         this.add(settingsScrollPane, BorderLayout.NORTH);
         GridBagLayout gridBagLayout = new GridBagLayout();
         settingsPanel.setLayout(gridBagLayout);
@@ -111,7 +112,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         gridBagConstraints.anchor = GridBagConstraints.NORTHWEST;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.weightx = 0.5D;
+        gridBagConstraints.weightx = 1.0D;
         gridBagConstraints.weighty = 1.0D;
 
         this.hmacSettingsSection(gridBagConstraints);
@@ -151,12 +152,12 @@ public class JWTOptionsPanel extends AbstractParamPanel {
 
                                     @Override
                                     public String getDescription() {
-                                        return "KeyStore file format";
+                                        return "PKCS12 format";
                                     }
 
                                     @Override
                                     public boolean accept(File f) {
-                                        return !f.isDirectory() && f.getName().endsWith(".jks");
+                                        return f.getName().endsWith(".p12");
                                     }
                                 });
                         trustStoreFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -170,7 +171,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                         if (trustStoreFileChooser.showOpenDialog(null)
                                 == JFileChooser.APPROVE_OPTION) {
                             final File selectedFile = trustStoreFileChooser.getSelectedFile();
-
+                            trustStorePath = selectedFile.getAbsolutePath();
                             trustStoreFileChooserTextField.setText(selectedFile.getAbsolutePath());
                         }
                     }
@@ -255,6 +256,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         gridBagConstraints.gridx++;
         JButton addButton =
                 new JButton(JWTI18n.getMessage("jwt.settings.general.customFuzz.addFuzzFields"));
+        settingsPanel.add(addButton, gridBagConstraints);
         addButton.addActionListener(
                 new ActionListener() {
 
@@ -360,7 +362,6 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                         settingsScrollPane.revalidate();
                     }
                 });
-        settingsPanel.add(addButton, gridBagConstraints);
     }
 
     private void showAddPayloadDialog(

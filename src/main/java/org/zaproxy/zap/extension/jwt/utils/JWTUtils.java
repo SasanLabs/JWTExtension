@@ -40,15 +40,10 @@ import com.nimbusds.jwt.SignedJWT;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.InvalidKeyException;
-import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Base64;
 import java.util.Objects;
@@ -57,7 +52,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.json.JSONObject;
-import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
@@ -139,7 +133,7 @@ public class JWTUtils {
             throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid");
         }
         JWTTokenBean jwtTokenBean = new JWTTokenBean();
-        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX);
+        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX, -1);
         jwtTokenBean.setHeader(getString(Base64.getUrlDecoder().decode(getBytes(tokens[0]))));
         jwtTokenBean.setPayload(getString(Base64.getUrlDecoder().decode(getBytes(tokens[1]))));
         jwtTokenBean.setSignature(Base64.getUrlDecoder().decode(getBytes(tokens[2])));
@@ -153,15 +147,15 @@ public class JWTUtils {
      * @throws InvalidKeySpecException
      * @throws IOException
      */
-    public static PublicKey getRSAPublicKey()
-            throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
-        // TODO if public key at path is not present
-        String publicKeyPath = JWTConfiguration.getInstance().getTrustStorePath();
-        byte[] publicKeyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
-        X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-        return kf.generatePublic(spec);
-    }
+    //    public static PublicKey getRSAPublicKey()
+    //            throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
+    //        // TODO if public key at path is not present
+    //        String publicKeyPath = JWTConfiguration.getInstance().getTrustStorePath();
+    //        byte[] publicKeyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
+    //        X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
+    //        KeyFactory kf = KeyFactory.getInstance("RSA");
+    //        return kf.generatePublic(spec);
+    //    }
 
     public static String getBase64EncodedHMACSignedToken(byte[] token, byte[] secretKey)
             throws JWTExtensionValidationException, UnsupportedEncodingException {
