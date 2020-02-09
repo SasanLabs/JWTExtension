@@ -33,24 +33,21 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.text.ParseException;
-import java.util.List;
 import java.util.Objects;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
@@ -58,6 +55,7 @@ import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
+import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
@@ -140,10 +138,10 @@ public class SignatureFuzzer implements JWTFuzzer {
             if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
                 return false;
             }
-            if(payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
-            	long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
-            	expiryTimeInMillis = expiryTimeInMillis + 2000;
-            	payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
+            if (payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
+                long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
+                expiryTimeInMillis = expiryTimeInMillis + 2000;
+                payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
             }
 
             // Generating JWK
@@ -186,21 +184,14 @@ public class SignatureFuzzer implements JWTFuzzer {
      */
     private boolean executeAlgoKeyConfusionFuzzedToken() {
         try {
-            KeyStore keyStore = KeyStore.getInstance("JKS");
+            KeyStore keyStore = KeyStore.getInstance("PKCS12");
             String trustStorePath = JWTConfiguration.getInstance().getTrustStorePath();
             if (trustStorePath == null) {
                 trustStorePath = System.getProperty("javax.net.ssl.trustStore");
             }
             if (Objects.nonNull(trustStorePath)) {
-                char[] password =
-                        JWTConfiguration.getInstance().getTrustStorePassword().toCharArray();
-                keyStore.load(new FileInputStream(trustStorePath), password);
-
-                JWKSet jwkSet = JWKSet.load(keyStore, null);
-                List<JWK> trustedKeys = jwkSet.getKeys();
-                JWTTokenBean clonedJWTokenBean =
-                        new JWTTokenBean(this.serverSideAttack.getJwtTokenBean());
-                JSONObject jwtHeaderJSON = new JSONObject(clonedJWTokenBean.getHeader());
+                JSONObject jwtHeaderJSON =
+                        new JSONObject(this.serverSideAttack.getJwtTokenBean().getHeader());
                 String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
                 if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
                     String jwtFuzzedHeader =
@@ -209,42 +200,37 @@ public class SignatureFuzzer implements JWTFuzzer {
                             JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(jwtFuzzedHeader)
                                     + JWT_TOKEN_PERIOD_CHARACTER
                                     + JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
-                                            clonedJWTokenBean.getPayload());
-                    for (JWK jwk : trustedKeys) {
-                        if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
-                            return false;
-                        }
-                        try {
-                            if (jwk instanceof RSAKey) {
-                                MACSigner macSigner =
-                                        new MACSigner(((RSAKey) jwk).toPublicKey().getEncoded());
-                                Base64URL signedToken =
-                                        macSigner.sign(
-                                                JWSHeader.parse(jwtFuzzedHeader),
-                                                JWTUtils.getBytes(
-                                                        base64EncodedFuzzedHeaderAndPayload));
-                                clonedJWTokenBean.setSignature(signedToken.decode());
-
-                                if (executeAttack(clonedJWTokenBean.getToken(), serverSideAttack)) {
-                                    raiseAlert(
-                                            MESSAGE_PREFIX,
-                                            VulnerabilityType.ALGORITHM_CONFUSION,
-                                            Alert.RISK_HIGH,
-                                            Alert.CONFIDENCE_HIGH,
-                                            clonedJWTokenBean.getToken(),
-                                            serverSideAttack);
-                                    return true;
-                                }
-                            }
-                        } catch (JOSEException | ParseException e) {
-                            LOGGER.error(
-                                    "Exception occurred while creating fuzzed token for confusion scenario",
-                                    e);
+                                            this.serverSideAttack.getJwtTokenBean().getPayload());
+                    char[] password =
+                            JWTConfiguration.getInstance().getTrustStorePassword().toCharArray();
+                    keyStore.load(new FileInputStream(trustStorePath), password);
+                    while (keyStore.aliases().hasMoreElements()) {
+                        String alias = keyStore.aliases().nextElement();
+                        Certificate certificate = keyStore.getCertificate(alias);
+                        Key publicKey = certificate.getPublicKey();
+                        JWTTokenBean clonedJWTokenBean =
+                                JWTUtils.parseJWTToken(
+                                        base64EncodedFuzzedHeaderAndPayload
+                                                + JWT_TOKEN_PERIOD_CHARACTER
+                                                + JWTUtils.getBase64EncodedHMACSignedToken(
+                                                        JWTUtils.getBytes(
+                                                                base64EncodedFuzzedHeaderAndPayload),
+                                                        publicKey.getEncoded()));
+                        if (executeAttack(clonedJWTokenBean.getToken(), serverSideAttack)) {
+                            raiseAlert(
+                                    MESSAGE_PREFIX,
+                                    VulnerabilityType.ALGORITHM_CONFUSION,
+                                    Alert.RISK_HIGH,
+                                    Alert.CONFIDENCE_HIGH,
+                                    clonedJWTokenBean.getToken(),
+                                    serverSideAttack);
+                            return true;
                         }
                     }
                 }
             }
-        } catch (KeyStoreException
+        } catch (JWTExtensionValidationException
+                | KeyStoreException
                 | NoSuchAlgorithmException
                 | CertificateException
                 | IOException e) {
