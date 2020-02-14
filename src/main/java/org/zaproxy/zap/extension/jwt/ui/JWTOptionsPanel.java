@@ -254,114 +254,101 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         settingsPanel.add(lblPayload, gridBagConstraints);
 
         gridBagConstraints.gridx++;
-        JButton addButton =
+        JButton addCustomFuzzFields =
                 new JButton(JWTI18n.getMessage("jwt.settings.general.customFuzz.addFuzzFields"));
-        settingsPanel.add(addButton, gridBagConstraints);
-        addButton.addActionListener(
+        settingsPanel.add(addCustomFuzzFields, gridBagConstraints);
+        addCustomFuzzFields.addActionListener(
                 new ActionListener() {
 
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        gridBagConstraints.gridy++;
-                        gridBagConstraints.gridx = 0;
-                        JComboBox<String> headerOrPayload =
-                                new JComboBox<String>(
-                                        new String[] {
-                                            JWTI18n.getMessage(
-                                                    "jwt.settings.general.customFuzz.tokenHeader"),
-                                            JWTI18n.getMessage(
-                                                    "jwt.settings.general.customFuzz.tokenPayload")
-                                        });
-                        headerOrPayload.setSelectedIndex(0);
-                        settingsPanel.add(headerOrPayload, gridBagConstraints);
+                        renderCustomFuzzFields(gridBagConstraints);
+                    }
+                });
+    }
 
-                        gridBagConstraints.gridx++;
-                        JTextField fieldName = new JTextField();
-                        fieldName.setColumns(10);
-                        settingsPanel.add(fieldName, gridBagConstraints);
+    private void renderCustomFuzzFields(GridBagConstraints gridBagConstraints) {
+        gridBagConstraints.gridy++;
+        gridBagConstraints.gridx = 0;
+        JComboBox<String> headerOrPayload =
+                new JComboBox<String>(
+                        new String[] {
+                            JWTI18n.getMessage("jwt.settings.general.customFuzz.tokenHeader"),
+                            JWTI18n.getMessage("jwt.settings.general.customFuzz.tokenPayload")
+                        });
+        headerOrPayload.setSelectedIndex(0);
+        settingsPanel.add(headerOrPayload, gridBagConstraints);
 
-                        gridBagConstraints.gridx++;
-                        JCheckBox signatureRequired = new JCheckBox();
-                        settingsPanel.add(signatureRequired, gridBagConstraints);
+        gridBagConstraints.gridx++;
+        JTextField fieldName = new JTextField();
+        fieldName.setColumns(10);
+        settingsPanel.add(fieldName, gridBagConstraints);
 
-                        gridBagConstraints.gridx++;
-                        JButton addPayload =
-                                new JButton(
-                                        JWTI18n.getMessage(
-                                                "jwt.settings.general.customFuzz.addPayload"));
-                        settingsPanel.add(addPayload, gridBagConstraints);
-                        CustomFieldFuzzer customFieldFuzzer = new CustomFieldFuzzer();
-                        addPayload.addActionListener(
-                                new ActionListener() {
+        gridBagConstraints.gridx++;
+        JCheckBox signatureRequired = new JCheckBox();
+        settingsPanel.add(signatureRequired, gridBagConstraints);
 
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        Consumer<FileStringPayloadGeneratorUI>
-                                                customFieldFuzzerConsumer =
-                                                        (FileStringPayloadGeneratorUI) ->
-                                                                customFieldFuzzer
-                                                                        .setFileStringPayloadGeneratorUI(
-                                                                                FileStringPayloadGeneratorUI);
-                                        Supplier<FileStringPayloadGeneratorUI>
-                                                customFieldFuzzerSupplier =
-                                                        () ->
-                                                                customFieldFuzzer
-                                                                        .getFileStringPayloadGeneratorUI();
-                                        showAddPayloadDialog(
-                                                customFieldFuzzerSupplier,
-                                                customFieldFuzzerConsumer);
-                                    }
-                                });
+        gridBagConstraints.gridx++;
+        JButton addPayload =
+                new JButton(JWTI18n.getMessage("jwt.settings.general.customFuzz.addPayload"));
+        settingsPanel.add(addPayload, gridBagConstraints);
+        CustomFieldFuzzer customFieldFuzzer = new CustomFieldFuzzer();
+        addPayload.addActionListener(
+                new ActionListener() {
 
-                        gridBagConstraints.gridx++;
-                        JButton saveButton =
-                                new JButton(
-                                        JWTI18n.getMessage(
-                                                "jwt.settings.general.customFuzz.saveFuzzFields"));
-                        settingsPanel.add(saveButton, gridBagConstraints);
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        Consumer<FileStringPayloadGeneratorUI> customFieldFuzzerConsumer =
+                                (FileStringPayloadGeneratorUI) ->
+                                        customFieldFuzzer.setFileStringPayloadGeneratorUI(
+                                                FileStringPayloadGeneratorUI);
+                        Supplier<FileStringPayloadGeneratorUI> customFieldFuzzerSupplier =
+                                () -> customFieldFuzzer.getFileStringPayloadGeneratorUI();
+                        showAddPayloadDialog(customFieldFuzzerSupplier, customFieldFuzzerConsumer);
+                    }
+                });
 
-                        gridBagConstraints.gridx++;
-                        JButton removeButton =
-                                new JButton(
-                                        JWTI18n.getMessage(
-                                                "jwt.settings.general.customFuzz.removeFuzzFields"));
-                        settingsPanel.add(removeButton, gridBagConstraints);
-                        removeButton.addActionListener(
-                                new ActionListener() {
+        gridBagConstraints.gridx++;
+        JButton saveButton =
+                new JButton(JWTI18n.getMessage("jwt.settings.general.customFuzz.saveFuzzFields"));
+        settingsPanel.add(saveButton, gridBagConstraints);
 
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        int index = customFieldFuzzers.indexOf(customFieldFuzzer);
-                                        if (index >= 0) {
-                                            customFieldFuzzers.remove(customFieldFuzzer);
-                                        }
-                                        settingsPanel.remove(headerOrPayload);
-                                        settingsPanel.remove(fieldName);
-                                        settingsPanel.remove(removeButton);
-                                        settingsPanel.remove(signatureRequired);
-                                        settingsPanel.remove(saveButton);
-                                        settingsPanel.remove(addPayload);
-                                        settingsScrollPane.revalidate();
-                                    }
-                                });
+        gridBagConstraints.gridx++;
+        JButton removeButton =
+                new JButton(JWTI18n.getMessage("jwt.settings.general.customFuzz.removeFuzzFields"));
+        settingsPanel.add(removeButton, gridBagConstraints);
+        removeButton.addActionListener(
+                new ActionListener() {
 
-                        saveButton.addActionListener(
-                                new ActionListener() {
-
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        customFieldFuzzer.setFieldName(fieldName.getText());
-                                        customFieldFuzzer.setHeaderField(
-                                                headerOrPayload.getSelectedIndex() == 0);
-                                        customFieldFuzzer.setSignatureRequired(
-                                                signatureRequired.isSelected());
-                                        customFieldFuzzers.add(customFieldFuzzer);
-                                    }
-                                });
-
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        int index = customFieldFuzzers.indexOf(customFieldFuzzer);
+                        if (index >= 0) {
+                            customFieldFuzzers.remove(customFieldFuzzer);
+                        }
+                        settingsPanel.remove(headerOrPayload);
+                        settingsPanel.remove(fieldName);
+                        settingsPanel.remove(removeButton);
+                        settingsPanel.remove(signatureRequired);
+                        settingsPanel.remove(saveButton);
+                        settingsPanel.remove(addPayload);
                         settingsScrollPane.revalidate();
                     }
                 });
+
+        saveButton.addActionListener(
+                new ActionListener() {
+
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        customFieldFuzzer.setFieldName(fieldName.getText());
+                        customFieldFuzzer.setHeaderField(headerOrPayload.getSelectedIndex() == 0);
+                        customFieldFuzzer.setSignatureRequired(signatureRequired.isSelected());
+                        customFieldFuzzers.add(customFieldFuzzer);
+                    }
+                });
+
+        settingsScrollPane.revalidate();
     }
 
     private void showAddPayloadDialog(
