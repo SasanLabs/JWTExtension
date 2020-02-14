@@ -46,7 +46,6 @@ public class JWTExtension extends ExtensionAdaptor {
         return Constant.ZAP_TEAM;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
     public void hook(ExtensionHook extensionHook) {
         super.hook(extensionHook);
