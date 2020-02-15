@@ -23,6 +23,8 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NULL_BYTE_CHARACT
 
 import com.nimbusds.jose.JOSEException;
 import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.text.ParseException;
 import java.util.List;
 import java.util.function.Predicate;
@@ -96,7 +98,9 @@ public class PayloadFuzzer implements JWTFuzzer {
                                                 VulnerabilityType.CUSTOM_PAYLOAD);
                                     } catch (UnsupportedEncodingException
                                             | ParseException
-                                            | JOSEException e) {
+                                            | JOSEException
+                                            | NoSuchAlgorithmException
+                                            | InvalidKeySpecException e) {
                                         LOGGER.error(
                                                 "Failed while signing the clonedJWTTokenBean:", e);
                                     }

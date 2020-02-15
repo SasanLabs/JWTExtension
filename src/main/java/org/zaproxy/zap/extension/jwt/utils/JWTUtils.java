@@ -41,8 +41,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
+import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Base64;
 import java.util.Objects;
@@ -183,27 +186,30 @@ public class JWTUtils {
 
     public static void handleSigningOfTokenCustomFieldFuzzer(
             CustomFieldFuzzer customFieldFuzzer, JWTTokenBean clonedJWTokenBean)
-            throws ParseException, JOSEException, UnsupportedEncodingException {
+            throws ParseException, JOSEException, UnsupportedEncodingException,
+                    NoSuchAlgorithmException, InvalidKeySpecException {
         JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
         String algoType = headerJSONObject.getString(JWTConstants.JWT_ALGORITHM_KEY_HEADER);
         if (algoType != null) {
             if ((algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
                     || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER))) {
-                // TODO key addition
-                JWSSigner signer = new RSASSASigner((PrivateKey) null);
-                SignedJWT signedJWT;
+                String signingKey = customFieldFuzzer.getSigningKey();
+                signingKey = signingKey.replace("-----BEGIN PRIVATE KEY-----", "");
+                signingKey = signingKey.replace("-----END PRIVATE KEY-----", "");
+                signingKey = signingKey.replaceAll("\\s+", "");
 
-                signedJWT =
+                PKCS8EncodedKeySpec ks = new PKCS8EncodedKeySpec(signingKey.getBytes());
+                KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+                PrivateKey privateKey = keyFactory.generatePrivate(ks);
+                JWSSigner signer = new RSASSASigner(privateKey);
+                SignedJWT signedJWT =
                         new SignedJWT(
                                 JWSHeader.parse(clonedJWTokenBean.getHeader()),
                                 JWTClaimsSet.parse(clonedJWTokenBean.getPayload()));
                 signedJWT.sign(signer);
                 clonedJWTokenBean.setSignature(signedJWT.getSignature().decode());
-
             } else if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
-
-                // TODO key handling
-                MACSigner macSigner = new MACSigner("SOMEKEY");
+                MACSigner macSigner = new MACSigner(customFieldFuzzer.getSigningKey());
                 String base64EncodedFuzzedHeaderAndPayload =
                         clonedJWTokenBean.getTokenWithoutSignature();
                 Base64URL signedToken =
@@ -211,6 +217,8 @@ public class JWTUtils {
                                 JWSHeader.parse(clonedJWTokenBean.getHeader()),
                                 JWTUtils.getBytes(base64EncodedFuzzedHeaderAndPayload));
                 clonedJWTokenBean.setSignature(signedToken.decode());
+            } else {
+                // TODO need to handle other types of algorithms
             }
         }
     }

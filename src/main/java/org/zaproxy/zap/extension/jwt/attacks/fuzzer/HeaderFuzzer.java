@@ -26,6 +26,8 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NONE_ALGORITHM_VA
 
 import com.nimbusds.jose.JOSEException;
 import java.io.UnsupportedEncodingException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -98,7 +100,9 @@ public class HeaderFuzzer implements JWTFuzzer {
                                         return executeAttackAndRaiseAlert(clonedJWTokenBean);
                                     } catch (UnsupportedEncodingException
                                             | ParseException
-                                            | JOSEException e) {
+                                            | JOSEException
+                                            | NoSuchAlgorithmException
+                                            | InvalidKeySpecException e) {
                                         LOGGER.error(
                                                 "Failed while signing the clonedJWTTokenBean:", e);
                                     }
