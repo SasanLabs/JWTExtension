@@ -36,6 +36,8 @@ public class CustomFieldFuzzer {
 
     private boolean isSignatureRequired;
 
+    private String signingKey;
+
     private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
 
     public String getFieldName() {
@@ -69,5 +71,13 @@ public class CustomFieldFuzzer {
     public void setFileStringPayloadGeneratorUI(
             FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI) {
         this.fileStringPayloadGeneratorUI = fileStringPayloadGeneratorUI;
+    }
+
+    public String getSigningKey() {
+        return signingKey;
+    }
+
+    public void setSigningKey(String signingKey) {
+        this.signingKey = signingKey;
     }
 }
