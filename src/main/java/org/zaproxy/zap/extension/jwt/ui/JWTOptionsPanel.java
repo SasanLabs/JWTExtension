@@ -24,6 +24,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -42,6 +43,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.filechooser.FileFilter;
@@ -115,11 +117,17 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         gridBagConstraints.weightx = 1.0D;
         gridBagConstraints.weighty = 1.0D;
 
+        Insets insets = new Insets(0, 15, 0, 15);
+        gridBagConstraints.insets = insets;
+
         this.hmacSettingsSection(gridBagConstraints);
         this.rsaSettingsSection(gridBagConstraints);
         gridBagConstraints.gridy++;
         gridBagConstraints.gridx = 0;
         this.generalSettingsSection(gridBagConstraints);
+
+        insets = new Insets(0, 15, 0, 15);
+        gridBagConstraints.insets = insets;
         gridBagConstraints.gridy++;
         footerPanel.add(getResetButton(), gridBagConstraints);
     }
@@ -233,6 +241,9 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         settingsPanel.add(ignoreClientConfigurationScanCheckBox, gridBagConstraints);
 
         gridBagConstraints.gridy++;
+
+        Insets insets = new Insets(10, 15, 10, 15);
+        gridBagConstraints.insets = insets;
         gridBagConstraints.gridx = 0;
         JLabel lblTargetSelection =
                 new JLabel(JWTI18n.getMessage("jwt.settings.general.customFuzz.jwtField.header"));
@@ -249,6 +260,11 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         settingsPanel.add(lblSignatureRequired, gridBagConstraints);
 
         gridBagConstraints.gridx++;
+        JLabel lblSigningKey =
+                new JLabel(JWTI18n.getMessage("jwt.settings.general.customFuzz.signingKey.header"));
+        settingsPanel.add(lblSigningKey, gridBagConstraints);
+
+        gridBagConstraints.gridx++;
         JLabel lblPayload =
                 new JLabel(JWTI18n.getMessage("jwt.settings.general.customFuzz.payload.header"));
         settingsPanel.add(lblPayload, gridBagConstraints);
@@ -262,6 +278,8 @@ public class JWTOptionsPanel extends AbstractParamPanel {
 
                     @Override
                     public void actionPerformed(ActionEvent e) {
+                        Insets insets = new Insets(10, 15, 10, 15);
+                        gridBagConstraints.insets = insets;
                         renderCustomFuzzFields(gridBagConstraints);
                     }
                 });
@@ -287,6 +305,10 @@ public class JWTOptionsPanel extends AbstractParamPanel {
         gridBagConstraints.gridx++;
         JCheckBox signatureRequired = new JCheckBox();
         settingsPanel.add(signatureRequired, gridBagConstraints);
+
+        gridBagConstraints.gridx++;
+        JTextArea signingKey = new JTextArea(10, 25);
+        settingsPanel.add(signingKey, gridBagConstraints);
 
         gridBagConstraints.gridx++;
         JButton addPayload =
@@ -332,6 +354,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                         settingsPanel.remove(signatureRequired);
                         settingsPanel.remove(saveButton);
                         settingsPanel.remove(addPayload);
+                        settingsPanel.remove(signingKey);
                         settingsScrollPane.revalidate();
                     }
                 });
@@ -344,6 +367,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
                         customFieldFuzzer.setFieldName(fieldName.getText());
                         customFieldFuzzer.setHeaderField(headerOrPayload.getSelectedIndex() == 0);
                         customFieldFuzzer.setSignatureRequired(signatureRequired.isSelected());
+                        customFieldFuzzer.setSigningKey(signingKey.getText());
                         customFieldFuzzers.add(customFieldFuzzer);
                     }
                 });
