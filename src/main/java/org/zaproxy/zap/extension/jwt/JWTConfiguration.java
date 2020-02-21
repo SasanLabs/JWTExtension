@@ -38,6 +38,7 @@ import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
  * attacks.
  *
  * @author preetkaran20@gmail.com KSASAN
+ * @since TODO add version
  */
 public class JWTConfiguration extends AbstractParam {
 
@@ -97,7 +98,7 @@ public class JWTConfiguration extends AbstractParam {
                     PARAM_CUSTOM_FIELD_FUZZER_BASE_KEY + ".numberOfPayloads_";
 
     public static final int DEFAULT_THREAD_COUNT = 2;
-    public static final int DEFAULT_HMAC_MAX_KEY_LENGTH = 52;
+    public static final int DEFAULT_HMAC_MAX_KEY_LENGTH = 26;
 
     private int threadCount;
     private String trustStorePath;

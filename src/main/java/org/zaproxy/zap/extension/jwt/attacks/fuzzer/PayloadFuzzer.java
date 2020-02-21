@@ -40,14 +40,15 @@ import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.attacks.GenericAsyncTaskExecutor;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
+import org.zaproxy.zap.extension.jwt.utils.JWTConstants;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
- * TODO need to add more attacks based on Payloads. However it is tough to find payload attacks lets
- * see.
+ * This class contains attacks related to manipulation of payload of JWT token.
  *
  * @author preetkaran20@gmail.com KSASAN
+ * @since TODO add version
  */
 public class PayloadFuzzer implements JWTFuzzer {
 
@@ -94,7 +95,7 @@ public class PayloadFuzzer implements JWTFuzzer {
                                         JWTUtils.handleSigningOfTokenCustomFieldFuzzer(
                                                 customFieldFuzzer, clonedJWTokenBean);
                                         return executAttackAndRaiseAlert(
-                                                clonedJWTokenBean.getToken(),
+                                                clonedJWTokenBean.getBase64EncodedToken(),
                                                 VulnerabilityType.CUSTOM_PAYLOAD);
                                     } catch (UnsupportedEncodingException
                                             | ParseException
@@ -108,7 +109,7 @@ public class PayloadFuzzer implements JWTFuzzer {
                                 } else {
                                     try {
                                         return executAttackAndRaiseAlert(
-                                                clonedJWTokenBean.getToken(),
+                                                clonedJWTokenBean.getBase64EncodedToken(),
                                                 VulnerabilityType.CUSTOM_PAYLOAD);
                                     } catch (UnsupportedEncodingException e) {
                                         LOGGER.error(
@@ -134,6 +135,9 @@ public class PayloadFuzzer implements JWTFuzzer {
     }
 
     /**
+     * Adds Null Byte and ZAP Eye catcher after the payload to check if JWT signature is still
+     * valid. if Signature is still valid then JWT validator is vulnerable to Null Byte Injection
+     *
      * @param jwtTokenBean
      * @param fuzzedTokens
      */
@@ -144,6 +148,21 @@ public class PayloadFuzzer implements JWTFuzzer {
         String nullBytePayload = NULL_BYTE_CHARACTER + Constant.getEyeCatcher();
         JWTTokenBean clonedJWTToken = new JWTTokenBean(this.serverSideAttack.getJwtTokenBean());
         try {
+            // Adding null byte to payload encoded with base64 encoding
+            String base64EncodedTokenWithoutSignature =
+                    clonedJWTToken.getBase64EncodedTokenWithoutSignature();
+            if (executAttackAndRaiseAlert(
+                    base64EncodedTokenWithoutSignature
+                            + nullBytePayload
+                            + JWTConstants.JWT_TOKEN_PERIOD_CHARACTER
+                            + JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
+                                    clonedJWTToken.getSignature()),
+                    VulnerabilityType.NULL_BYTE)) {
+                return true;
+            }
+
+            // Here we are adding null byte to payload which is not encoded with base64
+            // encoding.
             JSONObject payloadJsonObject = new JSONObject(clonedJWTToken.getPayload());
             for (String key : payloadJsonObject.keySet()) {
                 Object originalKeyValue = payloadJsonObject.get(key);
@@ -151,7 +170,7 @@ public class PayloadFuzzer implements JWTFuzzer {
                     payloadJsonObject.put(key, originalKeyValue.toString() + nullBytePayload);
                     clonedJWTToken.setPayload(payloadJsonObject.toString());
                     if (executAttackAndRaiseAlert(
-                            clonedJWTToken.getToken(), VulnerabilityType.NULL_BYTE)) {
+                            clonedJWTToken.getBase64EncodedToken(), VulnerabilityType.NULL_BYTE)) {
                         return true;
                     }
                     payloadJsonObject.put(key, originalKeyValue);
@@ -166,8 +185,6 @@ public class PayloadFuzzer implements JWTFuzzer {
         return false;
     }
 
-    // TODO read
-    // https://github.com/andresriancho/jwt-fuzzer/blob/master/jwtfuzzer/fuzzing_functions/payload_iss.py
     @Override
     public boolean fuzzJWTTokens(ServerSideAttack serverSideAttack) {
         this.serverSideAttack = serverSideAttack;

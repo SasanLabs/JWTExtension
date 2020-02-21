@@ -26,12 +26,12 @@ import org.parosproxy.paros.Constant;
  * Message Bundle
  *
  * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
  */
 public class JWTI18n {
     private static ResourceBundle message;
 
     public static void init() {
-
         message =
                 ResourceBundle.getBundle(
                         JWTI18n.class.getPackage().getName() + ".resources.Messages",

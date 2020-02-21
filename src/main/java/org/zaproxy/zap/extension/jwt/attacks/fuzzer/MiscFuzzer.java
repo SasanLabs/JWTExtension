@@ -24,10 +24,10 @@ import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
- * All the fuzzed token which requires modification to more than one component of JWT token will be
- * present under MiscFuzzer
+ * This class contains attacks related to manipulation of more than one component of JWT token.
  *
  * @author preetkaran20@gmail.com KSASAN
+ * @since TODO add version
  */
 public class MiscFuzzer implements JWTFuzzer {
 

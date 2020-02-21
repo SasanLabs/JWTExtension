@@ -26,7 +26,6 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HS256_ALGO_JAVA;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HMAC_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_PSS_ALGORITHM_IDENTIFIER;
-import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER_REGEX;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_REGEX_PATTERN;
 
 import com.nimbusds.jose.JOSEException;
@@ -52,31 +51,43 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.apache.log4j.Logger;
 import org.json.JSONObject;
 import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 
-/** @author KSASAN preetkaran20@gmail.com */
+/**
+ * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
+ */
 public class JWTUtils {
 
-    private static final Logger LOGGER = Logger.getLogger(JWTUtils.class);
-
+    /**
+     * Converts string to bytes. This method assumes that token is in UTF-8 charset which is as per
+     * the JWT specifications.
+     *
+     * @param token
+     * @return
+     */
     public static byte[] getBytes(String token) {
         return token.getBytes(StandardCharsets.UTF_8);
     }
 
-    private static String getString(byte[] tokenBytes) {
+    /**
+     * Converts bytes to String. This method assumes that bytes provides are as per UTF-8 charset
+     *
+     * @param tokenBytes
+     * @return
+     */
+    public static String getString(byte[] tokenBytes) {
         return new String(tokenBytes, StandardCharsets.UTF_8);
     }
 
     /**
-     * we are using base64 Url Safe. because of JWT specifications <br>
-     * <b> base64 and base64url encoding are different in the last two characters used, ie, base64
-     * -> '+/', or base64url -> '-_' see https://en.wikipedia.org/wiki/Base64#URL_applications </b>
-     * As per <a href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515, Appendix C. Notes on
-     * Implementing base64url Encoding without Padding</a> padding is not there in JWT.
+     * we are using <a href="https://en.wikipedia.org/wiki/Base64#URL_applications">base64 Url Safe
+     * encoding</a>. because of JWT specifications <br>
+     * Also we are removing the padding as per <a
+     * href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515</a> padding is not there in JWT.
      *
      * @param token
      * @return
@@ -88,11 +99,10 @@ public class JWTUtils {
     }
 
     /**
-     * we are using base64 Url Safe. because of JWT specifications <br>
-     * <b> base64 and base64url encoding are different in the last two characters used, ie, base64
-     * -> '+/', or base64url -> '-_' see https://en.wikipedia.org/wiki/Base64#URL_applications </b>
-     * As per <a href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515, Appendix C. Notes on
-     * Implementing base64url Encoding without Padding</a> padding is not there in JWT.
+     * we are using <a href="https://en.wikipedia.org/wiki/Base64#URL_applications">base64 Url Safe
+     * encoding</a>. because of JWT specifications <br>
+     * Also we are removing the padding as per <a
+     * href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515</a> padding is not there in JWT.
      *
      * @param token
      * @return
@@ -105,8 +115,7 @@ public class JWTUtils {
     }
 
     /**
-     * TODO Need to validate JWT Token using "Regex" Parses the JWT Token and then checks if token
-     * structure is valid
+     * Checks if the provided value is in a valid JWT format.
      *
      * @param jwtToken
      * @return
@@ -116,31 +125,6 @@ public class JWTUtils {
             return false;
         }
         return JWT_TOKEN_REGEX_PATTERN.matcher(jwtToken).matches();
-    }
-
-    /**
-     * Parses JWT token and creates JWTTokenBean we are using base64 Url Safe. because of JWT
-     * specifications <br>
-     * <b> base64 and base64url encoding are different in the last two characters used, ie, base64
-     * -> '+/', or base64url -> '-_' see https://en.wikipedia.org/wiki/Base64#URL_applications </b>
-     *
-     * @param jwtToken
-     * @return JWTTokenBean
-     * @throws UnsupportedEncodingException
-     * @throws JWTExtensionValidationException
-     */
-    public static JWTTokenBean parseJWTToken(String jwtToken)
-            throws JWTExtensionValidationException {
-        if (!isTokenValid(jwtToken)) {
-            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid");
-        }
-        JWTTokenBean jwtTokenBean = new JWTTokenBean();
-        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX, -1);
-        jwtTokenBean.setHeader(getString(Base64.getUrlDecoder().decode(getBytes(tokens[0]))));
-        jwtTokenBean.setPayload(getString(Base64.getUrlDecoder().decode(getBytes(tokens[1]))));
-        jwtTokenBean.setSignature(Base64.getUrlDecoder().decode(getBytes(tokens[2])));
-
-        return jwtTokenBean;
     }
 
     public static String getBase64EncodedHMACSignedToken(byte[] token, byte[] secretKey)
@@ -164,8 +148,9 @@ public class JWTUtils {
     }
 
     /**
-     * TODO For now it only handles Bearer Token. Need to check if applicable with other token
-     * types.
+     * This utility method removes {@literal BEARER_TOKEN_REGEX} from the value. For now it is just
+     * removing {@literal BEARER_TOKEN_REGEX} but in future we might need to remove other type of
+     * schemes too.
      *
      * @param value
      * @return
@@ -177,6 +162,14 @@ public class JWTUtils {
         return value;
     }
 
+    /**
+     * This utility method adds the {@literal BEARER_TOKEN_KEY} to the value. This method reverses
+     * the operation performed by {@link JWTUtils#extractingJWTFromParamValue}
+     *
+     * @param value
+     * @param jwtToken
+     * @return
+     */
     public static String addingJWTToParamValue(String value, String jwtToken) {
         if (hasBearerToken(value)) {
             jwtToken = BEARER_TOKEN_KEY + " " + jwtToken;
@@ -211,7 +204,7 @@ public class JWTUtils {
             } else if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
                 MACSigner macSigner = new MACSigner(customFieldFuzzer.getSigningKey());
                 String base64EncodedFuzzedHeaderAndPayload =
-                        clonedJWTokenBean.getTokenWithoutSignature();
+                        clonedJWTokenBean.getBase64EncodedTokenWithoutSignature();
                 Base64URL signedToken =
                         macSigner.sign(
                                 JWSHeader.parse(clonedJWTokenBean.getHeader()),

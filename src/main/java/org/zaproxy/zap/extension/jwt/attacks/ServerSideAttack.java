@@ -31,9 +31,10 @@ import org.zaproxy.zap.extension.jwt.attacks.fuzzer.PayloadFuzzer;
 import org.zaproxy.zap.extension.jwt.attacks.fuzzer.SignatureFuzzer;
 
 /**
- * Finds vulnerabilities in server side implementation and configuration of JWT.
+ * This class is used to find vulnerabilities in server side implementation of JWT.
  *
  * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
  */
 public class ServerSideAttack {
     private JWTActiveScanner jwtActiveScanner;

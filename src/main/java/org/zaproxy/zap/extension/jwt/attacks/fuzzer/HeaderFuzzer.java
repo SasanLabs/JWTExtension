@@ -45,7 +45,12 @@ import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
-/** @author preetkaran20@gmail.com KSASAN */
+/**
+ * This class contains attacks related to manipulation of header fields of JWT token.
+ *
+ * @author preetkaran20@gmail.com KSASAN
+ * @since TODO add version
+ */
 public class HeaderFuzzer implements JWTFuzzer {
 
     private static final Logger LOGGER = Logger.getLogger(HeaderFuzzer.class);
@@ -54,15 +59,16 @@ public class HeaderFuzzer implements JWTFuzzer {
 
     private ServerSideAttack serverSideAttack;
 
-    private boolean executeAttackAndRaiseAlert(JWTTokenBean clonJWTTokenBean) {
+    private boolean executeAttackAndRaiseAlert(
+            JWTTokenBean clonJWTTokenBean, VulnerabilityType vulnerabilityType) {
         try {
-            if (executeAttack(clonJWTTokenBean.getToken(), serverSideAttack)) {
+            if (executeAttack(clonJWTTokenBean.getBase64EncodedToken(), serverSideAttack)) {
                 raiseAlert(
                         MESSAGE_PREFIX,
-                        VulnerabilityType.CUSTOM_PAYLOAD,
+                        vulnerabilityType,
                         Alert.RISK_HIGH,
                         Alert.CONFIDENCE_HIGH,
-                        clonJWTTokenBean.getToken(),
+                        clonJWTTokenBean.getBase64EncodedToken(),
                         serverSideAttack);
                 return true;
             }
@@ -97,7 +103,9 @@ public class HeaderFuzzer implements JWTFuzzer {
                                     try {
                                         JWTUtils.handleSigningOfTokenCustomFieldFuzzer(
                                                 customFieldFuzzer, clonedJWTokenBean);
-                                        return executeAttackAndRaiseAlert(clonedJWTokenBean);
+                                        return executeAttackAndRaiseAlert(
+                                                clonedJWTokenBean,
+                                                VulnerabilityType.CUSTOM_PAYLOAD);
                                     } catch (UnsupportedEncodingException
                                             | ParseException
                                             | JOSEException
@@ -108,7 +116,8 @@ public class HeaderFuzzer implements JWTFuzzer {
                                     }
                                     return false;
                                 } else {
-                                    return executeAttackAndRaiseAlert(clonedJWTokenBean);
+                                    return executeAttackAndRaiseAlert(
+                                            clonedJWTokenBean, VulnerabilityType.CUSTOM_PAYLOAD);
                                 }
                             } else {
                                 return false;
@@ -156,7 +165,13 @@ public class HeaderFuzzer implements JWTFuzzer {
         return false;
     }
 
-    /** @param jwtTokenBean */
+    /**
+     * There are various variants of NONE algorithm attack and this method executes all those
+     * attacks and returns true if successful otherwise false.
+     *
+     * @param jwtTokenBean
+     * @return
+     */
     private boolean executeNoneAlgorithmVariantAttacks(JWTTokenBean jwtTokenBean) {
         JWTTokenBean clonedJWTokenBean = new JWTTokenBean(jwtTokenBean);
         for (String noneVariant : NONE_ALGORITHM_VARIANTS) {
@@ -166,20 +181,9 @@ public class HeaderFuzzer implements JWTFuzzer {
                 }
                 clonedJWTokenBean.setHeader(headerVariant);
                 clonedJWTokenBean.setSignature(JWTUtils.getBytes(""));
-                try {
-                    String fuzzedJWTToken = clonedJWTokenBean.getToken();
-                    if (executeAttack(fuzzedJWTToken, this.serverSideAttack)) {
-                        raiseAlert(
-                                MESSAGE_PREFIX,
-                                VulnerabilityType.NONE_ALGORITHM,
-                                Alert.RISK_HIGH,
-                                Alert.CONFIDENCE_HIGH,
-                                fuzzedJWTToken,
-                                this.serverSideAttack);
-                        return true;
-                    }
-                } catch (UnsupportedEncodingException e) {
-                    LOGGER.error("None Algorithm fuzzed token creation failed", e);
+                if (this.executeAttackAndRaiseAlert(
+                        clonedJWTokenBean, VulnerabilityType.NONE_ALGORITHM)) {
+                    return true;
                 }
             }
         }

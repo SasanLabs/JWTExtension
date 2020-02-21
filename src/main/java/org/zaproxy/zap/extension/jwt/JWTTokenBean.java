@@ -20,14 +20,19 @@
 package org.zaproxy.zap.extension.jwt;
 
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER;
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER_REGEX;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Base64;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
 /**
- * JWT token is parsed and broken into Header, Payload and Signature.
+ * JWT token is parsed and broken into Header, Payload and Signature.<br>
+ * This bean is created for easier computations and manipulation of JWT Token.<br>
+ * JWT Token Bean fields are not encoded in base64 encoding.
  *
  * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
  */
 public class JWTTokenBean {
 
@@ -37,7 +42,7 @@ public class JWTTokenBean {
 
     private byte[] signature;
 
-    public JWTTokenBean() {}
+    private JWTTokenBean() {}
 
     public JWTTokenBean(JWTTokenBean jwtTokenBean) {
         this.header = jwtTokenBean.getHeader();
@@ -45,41 +50,58 @@ public class JWTTokenBean {
         this.signature = jwtTokenBean.getSignature();
     }
 
+    /**
+     * returns Header without base64 encoding
+     *
+     * @return
+     */
     public String getHeader() {
         return header;
     }
 
+    /** @param header without base64 encoding */
     public void setHeader(String header) {
         this.header = header;
     }
 
+    /**
+     * returns Payload without base64 encoding
+     *
+     * @return
+     */
     public String getPayload() {
         return payload;
     }
 
+    /** @param payload without base64 encoding */
     public void setPayload(String payload) {
         this.payload = payload;
     }
 
+    /**
+     * returns Signature without base64 encoding
+     *
+     * @return
+     */
     public byte[] getSignature() {
         return signature;
     }
 
+    /** @param signature without base64 encoding */
     public void setSignature(byte[] signature) {
         this.signature = signature;
     }
 
     /**
-     * we are using base64 Url Safe. because of JWT specifications <br>
-     * <b> base64 and base64url encoding are different in the last two characters used, ie, base64
-     * -> '+/', or base64url -> '-_' see https://en.wikipedia.org/wiki/Base64#URL_applications </b>
-     * As per <a href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515, Appendix C. Notes on
-     * Implementing base64url Encoding without Padding</a> padding is not there in JWT.
+     * we are using <a href="https://en.wikipedia.org/wiki/Base64#URL_applications">base64 Url Safe
+     * encoding</a>. because of JWT specifications <br>
+     * Also we are removing the padding as per <a
+     * href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515</a> padding is not there in JWT.
      *
      * @return
      * @throws UnsupportedEncodingException
      */
-    public String getToken() throws UnsupportedEncodingException {
+    public String getBase64EncodedToken() throws UnsupportedEncodingException {
         String base64EncodedHeader = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(header);
         String base64EncodedPayload = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(payload);
         String base64EncodedSignature =
@@ -92,13 +114,39 @@ public class JWTTokenBean {
     }
 
     /**
-     * @return token to be Signed i.e. <base64EncodedHeader>.<base64EncodedPayload>
+     * @return token to be Signed i.e. base64EncodedHeader.base64EncodedPayload
      * @throws UnsupportedEncodingException
      */
-    public String getTokenWithoutSignature() throws UnsupportedEncodingException {
+    public String getBase64EncodedTokenWithoutSignature() throws UnsupportedEncodingException {
         String base64EncodedHeader = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(header);
         String base64EncodedPayload = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(payload);
         return base64EncodedHeader + JWT_TOKEN_PERIOD_CHARACTER + base64EncodedPayload;
+    }
+
+    /**
+     * Parses JWT token and creates JWTTokenBean instance. we are using <a
+     * href="https://en.wikipedia.org/wiki/Base64#URL_applications">base64 Url Safe encoding</a> as
+     * per JWT specifications <br>
+     *
+     * @param jwtToken
+     * @return JWTTokenBean
+     * @throws UnsupportedEncodingException
+     * @throws JWTExtensionValidationException
+     */
+    public static JWTTokenBean parseJWTToken(String jwtToken)
+            throws JWTExtensionValidationException {
+        if (!JWTUtils.isTokenValid(jwtToken)) {
+            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid");
+        }
+        JWTTokenBean jwtTokenBean = new JWTTokenBean();
+        String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX, -1);
+        jwtTokenBean.setHeader(
+                JWTUtils.getString(Base64.getUrlDecoder().decode(JWTUtils.getBytes(tokens[0]))));
+        jwtTokenBean.setPayload(
+                JWTUtils.getString(Base64.getUrlDecoder().decode(JWTUtils.getBytes(tokens[1]))));
+        jwtTokenBean.setSignature(Base64.getUrlDecoder().decode(JWTUtils.getBytes(tokens[2])));
+
+        return jwtTokenBean;
     }
 
     @Override
