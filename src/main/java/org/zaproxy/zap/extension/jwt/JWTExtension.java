@@ -19,6 +19,8 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.net.MalformedURLException;
 import java.net.URL;
 import org.apache.log4j.Logger;
@@ -26,6 +28,8 @@ import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.zaproxy.zap.extension.jwt.ui.JWTOptionsPanel;
+import org.zaproxy.zap.extension.jwt.ui.JWTSettingsUI;
+import org.zaproxy.zap.view.ZapMenuItem;
 
 /**
  * @author KSASAN preetkaran20@gmail.com
@@ -56,6 +60,17 @@ public class JWTExtension extends ExtensionAdaptor {
         try {
             extensionHook.addOptionsParamSet(getJWTConfiguration());
             extensionHook.getHookView().addOptionPanel(new JWTOptionsPanel());
+            ZapMenuItem jwtActiveEditorMenu = new ZapMenuItem("jwt.toolmenu.scanner.configuration");
+            jwtActiveEditorMenu.addActionListener(
+                    new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            LOGGER.info("JWT Settings item");
+                            JWTSettingsUI jwtSettingsUI = new JWTSettingsUI();
+                            jwtSettingsUI.setVisible(true);
+                        }
+                    });
+            extensionHook.getHookMenu().addToolsMenuItem(jwtActiveEditorMenu);
             LOGGER.info("JWT Extension loaded successfully");
         } catch (Exception e) {
             LOGGER.error("JWT Extension can't be loaded. Configuration not found or invalid", e);

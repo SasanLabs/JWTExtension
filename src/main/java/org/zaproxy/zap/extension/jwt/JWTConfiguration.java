@@ -54,6 +54,7 @@ public class JWTConfiguration extends AbstractParam {
     private static final String PARAM_IGNORE_CLIENT_CONFIGURATION_SCAN =
             PARAM_BASE_KEY + ".ignoreClientConfigurationScan";
 
+    // Payload Generator related config Keys
     private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY =
             PARAM_BASE_KEY + ".fileStringPayloadGeneratorUI";
     private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE =
@@ -71,6 +72,7 @@ public class JWTConfiguration extends AbstractParam {
     private static final String PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS =
             PARAM_FILE_PAYLOAD_GENERATOR_UI_BASE_KEY + ".numberOfPayloads";
 
+    // Custom field fuzzer related config Keys
     private static final String PARAM_CUSTOM_FIELD_FUZZER_BASE_KEY =
             PARAM_BASE_KEY + ".customFieldFuzzer";
     private static final String PARAM_FIELD_NAME_CUSTOM_FIELD_FUZZER =
@@ -177,8 +179,48 @@ public class JWTConfiguration extends AbstractParam {
         return customFieldFuzzers;
     }
 
+    private boolean clearFieldFuzzerProperty(int index) {
+        if (getConfig().containsKey(PARAM_FIELD_NAME_CUSTOM_FIELD_FUZZER + index)) {
+            getConfig().clearProperty(PARAM_FIELD_NAME_CUSTOM_FIELD_FUZZER + index);
+            getConfig().clearProperty(PARAM_IS_HEADER_CUSTOM_FIELD_FUZZER + index);
+            getConfig().clearProperty(PARAM_IS_SIGNATURE_REQUIRED_CUSTOM_FIELD_FUZZER + index);
+            getConfig()
+                    .clearProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE_CUSTOM_FIELD_FUZZER + index);
+            getConfig()
+                    .clearProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET_CUSTOM_FIELD_FUZZER + index);
+            getConfig()
+                    .clearProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN_CUSTOM_FIELD_FUZZER
+                                    + index);
+            getConfig()
+                    .clearProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE_CUSTOM_FIELD_FUZZER
+                                    + index);
+            getConfig()
+                    .clearProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES_CUSTOM_FIELD_FUZZER
+                                    + index);
+            getConfig()
+                    .clearProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS_CUSTOM_FIELD_FUZZER
+                                    + index);
+            getConfig()
+                    .clearProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT_CUSTOM_FIELD_FUZZER + index);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public void setCustomFieldFuzzers(List<CustomFieldFuzzer> customFieldFuzzers) {
         int index = 0;
+        while (clearFieldFuzzerProperty(index)) {
+            index++;
+        }
+        index = 0;
         for (CustomFieldFuzzer customFieldFuzzer : customFieldFuzzers) {
             getConfig()
                     .setProperty(
@@ -194,56 +236,60 @@ public class JWTConfiguration extends AbstractParam {
                             customFieldFuzzer.isSignatureRequired());
             FileStringPayloadGeneratorUI fileStringPayloadGeneratorUICustomFieldFuzzer =
                     customFieldFuzzer.getFileStringPayloadGeneratorUI();
-            if (fileStringPayloadGeneratorUICustomFieldFuzzer != null
-                    && fileStringPayloadGeneratorUICustomFieldFuzzer.getFile() != null) {
-                getConfig()
-                        .setProperty(
-                                PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE_CUSTOM_FIELD_FUZZER + index,
-                                fileStringPayloadGeneratorUICustomFieldFuzzer
-                                        .getFile()
-                                        .toUri()
-                                        .toString());
-                getConfig()
-                        .setProperty(
-                                PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET_CUSTOM_FIELD_FUZZER + index,
-                                fileStringPayloadGeneratorUICustomFieldFuzzer.getCharset().name());
-                getConfig()
-                        .setProperty(
-                                PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN_CUSTOM_FIELD_FUZZER
-                                        + index,
-                                fileStringPayloadGeneratorUICustomFieldFuzzer.getCommentToken());
-                getConfig()
-                        .setProperty(
-                                PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE_CUSTOM_FIELD_FUZZER
-                                        + index,
-                                fileStringPayloadGeneratorUICustomFieldFuzzer.isIgnoreFirstLine());
-                getConfig()
-                        .setProperty(
-                                PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES_CUSTOM_FIELD_FUZZER
-                                        + index,
-                                fileStringPayloadGeneratorUICustomFieldFuzzer.isIgnoreEmptyLines());
-                getConfig()
-                        .setProperty(
-                                PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS_CUSTOM_FIELD_FUZZER
-                                        + index,
-                                fileStringPayloadGeneratorUICustomFieldFuzzer
-                                        .getNumberOfPayloads());
-                getConfig()
-                        .setProperty(
-                                PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT_CUSTOM_FIELD_FUZZER + index,
-                                fileStringPayloadGeneratorUICustomFieldFuzzer.getLimit());
-            }
-
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE_CUSTOM_FIELD_FUZZER + index,
+                            fileStringPayloadGeneratorUICustomFieldFuzzer
+                                    .getFile()
+                                    .toUri()
+                                    .toString());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET_CUSTOM_FIELD_FUZZER + index,
+                            fileStringPayloadGeneratorUICustomFieldFuzzer.getCharset().name());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN_CUSTOM_FIELD_FUZZER
+                                    + index,
+                            fileStringPayloadGeneratorUICustomFieldFuzzer.getCommentToken());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE_CUSTOM_FIELD_FUZZER
+                                    + index,
+                            fileStringPayloadGeneratorUICustomFieldFuzzer.isIgnoreFirstLine());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES_CUSTOM_FIELD_FUZZER
+                                    + index,
+                            fileStringPayloadGeneratorUICustomFieldFuzzer.isIgnoreEmptyLines());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS_CUSTOM_FIELD_FUZZER
+                                    + index,
+                            fileStringPayloadGeneratorUICustomFieldFuzzer.getNumberOfPayloads());
+            getConfig()
+                    .setProperty(
+                            PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT_CUSTOM_FIELD_FUZZER + index,
+                            fileStringPayloadGeneratorUICustomFieldFuzzer.getLimit());
             index++;
         }
+
         this.customFieldFuzzers = customFieldFuzzers;
     }
 
     public void setFileStringPayloadGeneratorUI(
             FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI) {
         this.fileStringPayloadGeneratorUI = fileStringPayloadGeneratorUI;
-        if (fileStringPayloadGeneratorUI != null
-                && fileStringPayloadGeneratorUI.getFile() != null) {
+        if (fileStringPayloadGeneratorUI == null
+                || fileStringPayloadGeneratorUI.getFile() == null) {
+            getConfig().clearProperty(PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE);
+            getConfig().clearProperty(PARAM_FILE_PAYLOAD_GENERATOR_UI_CHARSET);
+            getConfig().clearProperty(PARAM_FILE_PAYLOAD_GENERATOR_UI_COMMENT_TOKEN);
+            getConfig().clearProperty(PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_FIRST_LINE);
+            getConfig().clearProperty(PARAM_FILE_PAYLOAD_GENERATOR_UI_IGNORE_TRIMMED_EMPTY_LINES);
+            getConfig().clearProperty(PARAM_FILE_PAYLOAD_GENERATOR_UI_NUMBER_OF_PAYLOADS);
+            getConfig().clearProperty(PARAM_FILE_PAYLOAD_GENERATOR_UI_LIMIT);
+        } else {
             getConfig()
                     .setProperty(
                             PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE,
@@ -381,7 +427,7 @@ public class JWTConfiguration extends AbstractParam {
                                     isTrimmedEmptyLine,
                                     isIgnoreFirstLine,
                                     numberOfPayload);
-                    this.setFileStringPayloadGeneratorUI(fileStringPayloadGeneratorUI);
+                    customFieldFuzzer.setFileStringPayloadGeneratorUI(fileStringPayloadGeneratorUI);
                 } catch (URISyntaxException e) {
                     LOGGER.error("Error occurred while parsing config ", e);
                 }
