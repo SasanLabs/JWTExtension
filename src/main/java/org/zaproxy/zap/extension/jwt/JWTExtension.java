@@ -27,7 +27,10 @@ import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.zaproxy.zap.extension.jwt.ui.JWTOptionsPanel;
 
-/** @author KSASAN preetkaran20@gmail.com */
+/**
+ * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
+ */
 public class JWTExtension extends ExtensionAdaptor {
 
     protected static final Logger LOGGER = Logger.getLogger(JWTExtension.class);
@@ -49,12 +52,11 @@ public class JWTExtension extends ExtensionAdaptor {
     @Override
     public void hook(ExtensionHook extensionHook) {
         super.hook(extensionHook);
-        // initialize props
         JWTI18n.init();
         try {
-            LOGGER.error("JWT Extension");
             extensionHook.addOptionsParamSet(getJWTConfiguration());
             extensionHook.getHookView().addOptionPanel(new JWTOptionsPanel());
+            LOGGER.info("JWT Extension loaded successfully");
         } catch (Exception e) {
             LOGGER.error("JWT Extension can't be loaded. Configuration not found or invalid", e);
         }

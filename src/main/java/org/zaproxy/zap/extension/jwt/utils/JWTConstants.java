@@ -21,7 +21,10 @@ package org.zaproxy.zap.extension.jwt.utils;
 
 import java.util.regex.Pattern;
 
-/** @author KSASAN preetkaran20@gmail.com */
+/**
+ * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
+ */
 public interface JWTConstants {
 
     char JWT_TOKEN_PERIOD_CHARACTER = '.';

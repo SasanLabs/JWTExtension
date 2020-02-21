@@ -24,12 +24,20 @@ import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
 /**
- * Common interface for all the jwt fuzzers.
+ * JWTFuzzer is the common interface for all the jwt fuzzers.
  *
  * @author preetkaran20@gmail.com KSASAN
+ * @since TODO add version
  */
 public interface JWTFuzzer {
 
+    /**
+     * Executes the attack and returns {@code true} if successful otherwise false.
+     *
+     * @param fuzzedJWTToken
+     * @param serverSideAttack
+     * @return
+     */
     default boolean executeAttack(String fuzzedJWTToken, ServerSideAttack serverSideAttack) {
         serverSideAttack.getJwtActiveScanner().decreaseRequestCount();
         return serverSideAttack
@@ -42,7 +50,7 @@ public interface JWTFuzzer {
     }
 
     /**
-     * Raises Alert for all the fuzzers.
+     * Raises Alert for all the JWT fuzzers.
      *
      * @param messagePrefix
      * @param vulnerabilityPrefix
@@ -76,7 +84,7 @@ public interface JWTFuzzer {
                         serverSideAttack.getMsg());
     }
     /**
-     * Manipulates the JWT token and executes them, raise alert if it works
+     * Manipulates the JWT token, executes them and also raise alert if successful
      *
      * @param serverSideAttack
      * @return true if attack is successful.

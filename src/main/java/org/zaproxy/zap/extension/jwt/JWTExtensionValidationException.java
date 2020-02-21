@@ -19,7 +19,10 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
-/** @author KSASAN preetkaran20@gmail.com */
+/**
+ * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
+ */
 public class JWTExtensionValidationException extends Exception {
 
     private static final long serialVersionUID = 372527297369183960L;

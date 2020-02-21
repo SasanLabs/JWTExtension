@@ -3,7 +3,7 @@
  *
  * ZAP is an HTTP/HTTPS proxy for assessing web application security.
  *
- * Copyright 2019 The ZAP Development Team
+ * Copyright 2020 The ZAP Development Team
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,22 +31,24 @@ import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.model.TechSet;
 
 /**
- * JWT plugin used to find the vulnerabilities in JWT implementations. Resources containing more
- * information about vulnerable implementations are: <br>
+ * JWT Scanner is used to find the vulnerabilities in JWT implementations. <br>
+ * Resources containing more information about vulnerabilities in implementations are: <br>
  *
  * <ol>
- *   <li>https://tools.ietf.org/html/draft-ietf-oauth-jwt-bcp-06
- *   <li>https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html ->
- *       For in-depth analysis about vulnerabilities in JWT implementation
- *   <li>https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries -> For server
- *       side vulnerabilties in JWT implementations
- *   <li>https://github.com/SasanLabs/JWTExtension/blob/master/BrainStorming.md -> General
- *       understanding
- *   <li>https://github.com/ticarpi/jwt_tool/blob/master/jwt_tool.py -> Fuzzer Logic
- *   <li>https://github.com/andresriancho/jwt-fuzzer -> Fuzzer Logic
+ *   <li><a href="https://tools.ietf.org/html/draft-ietf-oauth-jwt-bcp-06" >JSON Web Token Best
+ *       Current Practices(ieft document)</a>
+ *   <li><a
+ *       href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html">
+ *       OWASP cheatsheet for vulnerabilities in JWT implementation </a>
+ *   <li><a href="https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries">For
+ *       server side vulnerabilities in JWT implementations</a>
+ *   <li><a href="https://github.com/ticarpi/jwt_tool/blob/master/jwt_tool.py">JWT vulnerability
+ *       finding tool</a>
+ *   <li><a href="https://github.com/andresriancho/jwt-fuzzer">JWT header/payload field fuzzer</a>
  * </ol>
  *
  * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
  */
 public class JWTActiveScanner extends AbstractAppParamPlugin {
 
@@ -84,10 +86,10 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         newValue = JWTUtils.extractingJWTFromParamValue(newValue);
 
         if (!JWTUtils.isTokenValid(newValue)) {
-            LOGGER.error("Token: " + value + " is not a valid JWT token.");
+            LOGGER.info("Token: " + newValue + " is not a valid JWT token.");
             return;
         }
-        // Sending a request to compare fuzzed response and actual response
+        // Sending request to save actual response and then compare it with new response
         try {
             sendAndReceive(msg);
         } catch (IOException e) {
@@ -97,7 +99,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
 
         JWTTokenBean jwtTokenBean;
         try {
-            jwtTokenBean = JWTUtils.parseJWTToken(newValue);
+            jwtTokenBean = JWTTokenBean.parseJWTToken(newValue);
         } catch (JWTExtensionValidationException e) {
             LOGGER.error("Unable to parse JWT Token", e);
             return;
@@ -121,12 +123,12 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     }
 
     /**
-     * performs attack to find if client side configurations for JWT token are proper.
+     * performs attack to find if client side configuration for JWT token is proper.
      *
      * @param msg
      * @param param
      * @param jwtTokenBean
-     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
+     * @return {@code true} if the vulnerability is found, {@code false} otherwise.
      */
     private boolean performAttackClientSideConfigurations(
             HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
@@ -134,13 +136,13 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     }
 
     /**
-     * performs attack to checks JWT implementation weaknesses, weak key usages and other types of
+     * performs attack to find JWT implementation weaknesses like weak key usage or other types of
      * attacks.
      *
      * @param msg
      * @param param
      * @param jwtTokenBean
-     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
+     * @return {@code true} if the vulnerability is found, {@code false} otherwise.
      */
     private boolean performAttackServerSideConfigurations(
             HttpMessage msg, String param, JWTTokenBean jwtTokenBean, String value) {
@@ -189,7 +191,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
      * @param msg
      * @param param
      * @param jwtToken
-     * @return {@code true} if the vulnerability was found, {@code false} otherwise.
+     * @return {@code true} if the vulnerability is found, {@code false} otherwise.
      */
     public boolean sendFuzzedMsgAndCheckIfAttackSuccessful(
             HttpMessage msg, String param, String jwtToken, String value) {
@@ -224,28 +226,13 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     }
 
     @Override
-    public int getCategory() {
-        return 0;
-    }
-
-    @Override
     public String getSolution() {
-        return "";
+        return "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet_for_Java.html";
     }
 
     @Override
     public String getReference() {
-        return "";
-    }
-
-    @Override
-    public int getCweId() {
-        return 89;
-    }
-
-    @Override
-    public int getWascId() {
-        return 19;
+        return "https://tools.ietf.org/html/draft-ietf-oauth-jwt-bcp-06";
     }
 
     @Override
@@ -255,5 +242,10 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
             return techSet;
         }
         return TechSet.AllTech;
+    }
+
+    @Override
+    public int getCategory() {
+        return 0;
     }
 }

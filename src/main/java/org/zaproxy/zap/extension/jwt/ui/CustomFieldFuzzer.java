@@ -22,9 +22,11 @@ package org.zaproxy.zap.extension.jwt.ui;
 import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGeneratorUIHandler.FileStringPayloadGeneratorUI;
 
 /**
+ * This class {@code CustomFieldFuzzer} is used for storing values of custom fields under general
+ * settings section in UI.
+ *
  * @author preetkaran20@gmail.com KSASAN
- *     <p>this class {@code CustomFieldFuzzer} is used for storing values selected in UI for
- *     fuzzing.
+ * @since TODO add version
  */
 public class CustomFieldFuzzer {
 

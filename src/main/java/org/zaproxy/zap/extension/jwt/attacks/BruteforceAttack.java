@@ -62,6 +62,7 @@ import org.zaproxy.zap.utils.ResettableAutoCloseableIterator;
  * </ol>
  *
  * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
  */
 public class BruteforceAttack {
 
@@ -175,7 +176,8 @@ public class BruteforceAttack {
                 (secretKey) -> {
                     LOGGER.info("Secret Key: " + secretKey);
                     try {
-                        String tokenToBeSigned = jwtTokenBean.getTokenWithoutSignature();
+                        String tokenToBeSigned =
+                                jwtTokenBean.getBase64EncodedTokenWithoutSignature();
                         String base64EncodedSignature =
                                 JWTUtils.getBase64EncodedHMACSignedToken(
                                         JWTUtils.getBytes(tokenToBeSigned),

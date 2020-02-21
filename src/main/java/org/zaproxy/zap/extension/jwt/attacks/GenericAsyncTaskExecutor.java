@@ -36,6 +36,7 @@ import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 
 /**
  * @author preetkaran20@gmail.com KSASAN
+ * @since TODO add version
  * @param <T>
  */
 public class GenericAsyncTaskExecutor<T> {
@@ -72,7 +73,7 @@ public class GenericAsyncTaskExecutor<T> {
     private boolean isStop() {
         if (isAttackSuccessful || this.jwtActiveScanner.isStop()) {
             LOGGER.info(
-                    "Stopping because either attack is successfull or user has manually stopped the execution");
+                    "Stopping because either attack is successful or user has manually stopped the execution");
             return true;
         }
         return false;

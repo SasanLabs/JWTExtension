@@ -70,7 +70,12 @@ import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
-/** @author preetkaran20@gmail.com KSASAN */
+/**
+ * This class contains attacks related to manipulation of signature of JWT token.
+ *
+ * @author preetkaran20@gmail.com KSASAN
+ * @since TODO add version
+ */
 public class SignatureFuzzer implements JWTFuzzer {
 
     private static final Logger LOGGER = Logger.getLogger(SignatureFuzzer.class);
@@ -94,14 +99,16 @@ public class SignatureFuzzer implements JWTFuzzer {
         }
 
         if (executeAttack(
-                cloneJWTTokenBean.getToken() + NULL_BYTE_CHARACTER + Constant.getEyeCatcher(),
+                cloneJWTTokenBean.getBase64EncodedToken()
+                        + NULL_BYTE_CHARACTER
+                        + Constant.getEyeCatcher(),
                 serverSideAttack)) {
             raiseAlert(
                     MESSAGE_PREFIX,
                     VulnerabilityType.NULL_BYTE,
                     Alert.RISK_MEDIUM,
                     Alert.CONFIDENCE_HIGH,
-                    cloneJWTTokenBean.getToken(),
+                    cloneJWTTokenBean.getBase64EncodedToken(),
                     serverSideAttack);
             return true;
         }
@@ -112,13 +119,13 @@ public class SignatureFuzzer implements JWTFuzzer {
 
         // Replaces the signature with NullByte.
         cloneJWTTokenBean.setSignature(JWTUtils.getBytes(NULL_BYTE_CHARACTER));
-        if (executeAttack(cloneJWTTokenBean.getToken(), serverSideAttack)) {
+        if (executeAttack(cloneJWTTokenBean.getBase64EncodedToken(), serverSideAttack)) {
             raiseAlert(
                     MESSAGE_PREFIX,
                     VulnerabilityType.NULL_BYTE,
                     Alert.RISK_HIGH,
                     Alert.CONFIDENCE_HIGH,
-                    cloneJWTTokenBean.getToken(),
+                    cloneJWTTokenBean.getBase64EncodedToken(),
                     serverSideAttack);
             return true;
         }
@@ -252,20 +259,21 @@ public class SignatureFuzzer implements JWTFuzzer {
                         Certificate certificate = keyStore.getCertificate(alias);
                         Key publicKey = certificate.getPublicKey();
                         JWTTokenBean clonedJWTokenBean =
-                                JWTUtils.parseJWTToken(
+                                JWTTokenBean.parseJWTToken(
                                         base64EncodedFuzzedHeaderAndPayload
                                                 + JWT_TOKEN_PERIOD_CHARACTER
                                                 + JWTUtils.getBase64EncodedHMACSignedToken(
                                                         JWTUtils.getBytes(
                                                                 base64EncodedFuzzedHeaderAndPayload),
                                                         publicKey.getEncoded()));
-                        if (executeAttack(clonedJWTokenBean.getToken(), serverSideAttack)) {
+                        if (executeAttack(
+                                clonedJWTokenBean.getBase64EncodedToken(), serverSideAttack)) {
                             raiseAlert(
                                     MESSAGE_PREFIX,
                                     VulnerabilityType.ALGORITHM_CONFUSION,
                                     Alert.RISK_HIGH,
                                     Alert.CONFIDENCE_HIGH,
-                                    clonedJWTokenBean.getToken(),
+                                    clonedJWTokenBean.getBase64EncodedToken(),
                                     serverSideAttack);
                             return true;
                         }

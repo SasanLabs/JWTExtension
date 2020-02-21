@@ -39,9 +39,10 @@ import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 import org.zaproxy.zap.sharedutils.CookieUtils;
 
 /**
- * Finds vulnerability in Client Storage of JWT token.
+ * This class is used to find vulnerability in Client side implementation of JWT token.
  *
  * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
  */
 public class ClientSideAttack {
 
@@ -141,7 +142,6 @@ public class ClientSideAttack {
                         return true;
                     }
                 }
-                System.out.println(headerValue);
                 break;
             }
         }
@@ -158,8 +158,20 @@ public class ClientSideAttack {
                     return true;
                 }
             }
+
+            TreeSet<HtmlParameter> formHtmlParameters = msg.getFormParams();
+            for (HtmlParameter htmlParameter : formHtmlParameters) {
+                if (htmlParameter.getName().equals(param)) {
+                    this.raiseAlert(
+                            VulnerabilityType.FORM_PARAM,
+                            Alert.RISK_INFO,
+                            Alert.CONFIDENCE_LOW,
+                            param,
+                            msg);
+                    return true;
+                }
+            }
         }
-        // Check if stored in Local Storage and Session Storage
         return false;
     }
 }
