@@ -22,7 +22,6 @@ package org.zaproxy.zap.extension.jwt.utils;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.BASE64_PADDING_CHARACTER_REGEX;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.BEARER_TOKEN_KEY;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.BEARER_TOKEN_REGEX;
-import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HS256_ALGO_JAVA;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HMAC_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_PSS_ALGORITHM_IDENTIFIER;
@@ -51,7 +50,6 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.json.JSONObject;
 import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
@@ -127,16 +125,25 @@ public class JWTUtils {
         return JWT_TOKEN_REGEX_PATTERN.matcher(jwtToken).matches();
     }
 
-    public static String getBase64EncodedHMACSignedToken(byte[] token, byte[] secretKey)
+    public static String getBase64EncodedHMACSignedToken(
+            byte[] token, byte[] secretKey, String algorithm)
             throws JWTExtensionValidationException, UnsupportedEncodingException {
         try {
-            Mac hmacSHA256 = Mac.getInstance(HS256_ALGO_JAVA);
-            SecretKeySpec hmacSecretKey = new SecretKeySpec(secretKey, HS256_ALGO_JAVA);
-            hmacSHA256.init(hmacSecretKey);
-            byte[] tokenSignature = hmacSHA256.doFinal(token);
-            String base64EncodedSignature =
-                    JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(tokenSignature);
-            return base64EncodedSignature;
+            if (JWTConstants.JWT_HMAC_ALGO_TO_JAVA_ALGORITHM_MAPPING.containsKey(algorithm)) {
+                Mac hmacSHA =
+                        Mac.getInstance(
+                                JWTConstants.JWT_HMAC_ALGO_TO_JAVA_ALGORITHM_MAPPING.get(
+                                        algorithm));
+                SecretKeySpec hmacSecretKey = new SecretKeySpec(secretKey, hmacSHA.getAlgorithm());
+                hmacSHA.init(hmacSecretKey);
+                byte[] tokenSignature = hmacSHA.doFinal(token);
+                String base64EncodedSignature =
+                        JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(tokenSignature);
+                return base64EncodedSignature;
+            } else {
+                throw new JWTExtensionValidationException(
+                        algorithm + " is not a supported HMAC algorithm.");
+            }
         } catch (InvalidKeyException | NoSuchAlgorithmException | IOException e) {
             throw new JWTExtensionValidationException(
                     "Exception occurred while Signing token: " + getString(token), e);
@@ -181,8 +188,7 @@ public class JWTUtils {
             CustomFieldFuzzer customFieldFuzzer, JWTTokenBean clonedJWTokenBean)
             throws ParseException, JOSEException, UnsupportedEncodingException,
                     NoSuchAlgorithmException, InvalidKeySpecException {
-        JSONObject headerJSONObject = new JSONObject(clonedJWTokenBean.getHeader());
-        String algoType = headerJSONObject.getString(JWTConstants.JWT_ALGORITHM_KEY_HEADER);
+        String algoType = clonedJWTokenBean.getAlgorithm();
         if (algoType != null) {
             if ((algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
                     || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER))) {

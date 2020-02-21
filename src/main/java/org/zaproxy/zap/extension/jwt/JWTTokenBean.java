@@ -19,11 +19,13 @@
  */
 package org.zaproxy.zap.extension.jwt;
 
+import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER_REGEX;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Base64;
+import org.json.JSONObject;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
 /**
@@ -50,11 +52,7 @@ public class JWTTokenBean {
         this.signature = jwtTokenBean.getSignature();
     }
 
-    /**
-     * returns Header without base64 encoding
-     *
-     * @return
-     */
+    /** @return Header without base64 encoding */
     public String getHeader() {
         return header;
     }
@@ -64,11 +62,7 @@ public class JWTTokenBean {
         this.header = header;
     }
 
-    /**
-     * returns Payload without base64 encoding
-     *
-     * @return
-     */
+    /** @return Payload without base64 encoding */
     public String getPayload() {
         return payload;
     }
@@ -78,11 +72,7 @@ public class JWTTokenBean {
         this.payload = payload;
     }
 
-    /**
-     * returns Signature without base64 encoding
-     *
-     * @return
-     */
+    /** @return Signature without base64 encoding */
     public byte[] getSignature() {
         return signature;
     }
@@ -90,6 +80,13 @@ public class JWTTokenBean {
     /** @param signature without base64 encoding */
     public void setSignature(byte[] signature) {
         this.signature = signature;
+    }
+
+    /** @return algorithm value from Header */
+    public String getAlgorithm() {
+        JSONObject headerJSONObject = new JSONObject(this.getHeader());
+        String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
+        return algoType;
     }
 
     /**
