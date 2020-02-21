@@ -55,6 +55,8 @@ import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 
 /**
+ * Contains Utility methods for handling various operations on JWT Token.
+ *
  * @author KSASAN preetkaran20@gmail.com
  * @since TODO add version
  */
@@ -125,6 +127,26 @@ public class JWTUtils {
         return JWT_TOKEN_REGEX_PATTERN.matcher(jwtToken).matches();
     }
 
+    /**
+     * Signs token using provided secretKey based on the provided algorithm. This method only
+     * handles signing of token using HS*(Hmac + Sha*) based algorithm <br>
+     *
+     * <p>Note: This method adds custom java based implementation of HS* algorithm and doesn't use
+     * any library like Nimbus+JOSE or JJWT and reason for this is, libraries are having validations
+     * related to Key sizes and they doesn't allow weak keys so for signing token using weak keys
+     * (for finding vulnerabilities in web applications that are using old implementations or custom
+     * implementations) is not possible therefore added this custom implementation for HS*
+     * algorithms.
+     *
+     * <p>
+     *
+     * @param token
+     * @param secretKey
+     * @param algorithm
+     * @return
+     * @throws JWTExtensionValidationException
+     * @throws UnsupportedEncodingException
+     */
     public static String getBase64EncodedHMACSignedToken(
             byte[] token, byte[] secretKey, String algorithm)
             throws JWTExtensionValidationException, UnsupportedEncodingException {
@@ -184,6 +206,15 @@ public class JWTUtils {
         return jwtToken;
     }
 
+    /**
+     * @param customFieldFuzzer
+     * @param clonedJWTokenBean
+     * @throws ParseException
+     * @throws JOSEException
+     * @throws UnsupportedEncodingException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeySpecException
+     */
     public static void handleSigningOfTokenCustomFieldFuzzer(
             CustomFieldFuzzer customFieldFuzzer, JWTTokenBean clonedJWTokenBean)
             throws ParseException, JOSEException, UnsupportedEncodingException,
