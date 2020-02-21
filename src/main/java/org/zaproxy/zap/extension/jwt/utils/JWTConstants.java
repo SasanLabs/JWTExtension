@@ -19,6 +19,8 @@
  */
 package org.zaproxy.zap.extension.jwt.utils;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -58,7 +60,6 @@ public interface JWTConstants {
     };
 
     String HMAC_256 = "HS256";
-    String HS256_ALGO_JAVA = "HmacSHA256";
     String NULL_BYTE_CHARACTER = String.valueOf((char) 0);
     String BEARER_TOKEN_REGEX = "(?i)bearer";
     String BEARER_TOKEN_KEY = "Bearer";
@@ -71,4 +72,14 @@ public interface JWTConstants {
     String SAME_SITE_NONE_MODE = "None";
     String COOKIE_PREFIX_SECURE = "__Secure-";
     String COOKIE_PREFIX_HOST = "__Host-";
+    Map<String, String> JWT_HMAC_ALGO_TO_JAVA_ALGORITHM_MAPPING =
+            createJWTHmacAlgoToJavaAlgoMapping();
+
+    static Map<String, String> createJWTHmacAlgoToJavaAlgoMapping() {
+        Map<String, String> jwtAlgoToJavaAlgoMapping = new HashMap<String, String>();
+        jwtAlgoToJavaAlgoMapping.put("HS256", "HmacSHA256");
+        jwtAlgoToJavaAlgoMapping.put("HS384", "HmacSHA384");
+        jwtAlgoToJavaAlgoMapping.put("HS512", "HmacSHA512");
+        return jwtAlgoToJavaAlgoMapping;
+    }
 }

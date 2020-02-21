@@ -19,7 +19,6 @@
  */
 package org.zaproxy.zap.extension.jwt.attacks;
 
-import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HMAC_ALGORITHM_IDENTIFIER;
 
 import com.nimbusds.jose.JOSEException;
@@ -30,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 import org.apache.log4j.Logger;
-import org.json.JSONObject;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.zap.extension.fuzz.payloads.DefaultPayload;
@@ -181,7 +179,8 @@ public class BruteforceAttack {
                         String base64EncodedSignature =
                                 JWTUtils.getBase64EncodedHMACSignedToken(
                                         JWTUtils.getBytes(tokenToBeSigned),
-                                        JWTUtils.getBytes(secretKey));
+                                        JWTUtils.getBytes(secretKey),
+                                        jwtTokenBean.getAlgorithm());
                         this.jwtActiveScanner.decreaseRequestCount();
                         if (base64EncodedSignature.equals(
                                 JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(
@@ -214,8 +213,7 @@ public class BruteforceAttack {
     }
 
     public boolean execute() {
-        JSONObject headerJSONObject = new JSONObject(jwtTokenBean.getHeader());
-        String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
+        String algoType = this.jwtTokenBean.getAlgorithm();
         if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
             try {
                 int minimumRequiredKeyLength =

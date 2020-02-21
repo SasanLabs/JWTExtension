@@ -21,7 +21,6 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HMAC_256;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JSON_WEB_KEY_HEADER;
-import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EC_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EXP_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
@@ -168,7 +167,7 @@ public class SignatureFuzzer implements JWTFuzzer {
                 new JSONObject(this.serverSideAttack.getJwtTokenBean().getHeader());
         JSONObject payloadJSONObject =
                 new JSONObject(this.serverSideAttack.getJwtTokenBean().getPayload());
-        String algoType = headerJSONObject.getString(JWT_ALGORITHM_KEY_HEADER);
+        String algoType = this.serverSideAttack.getJwtTokenBean().getAlgorithm();
 
         if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
             return false;
@@ -240,9 +239,7 @@ public class SignatureFuzzer implements JWTFuzzer {
                 trustStorePath = System.getProperty("javax.net.ssl.trustStore");
             }
             if (Objects.nonNull(trustStorePath)) {
-                JSONObject jwtHeaderJSON =
-                        new JSONObject(this.serverSideAttack.getJwtTokenBean().getHeader());
-                String algoType = jwtHeaderJSON.getString(JWT_ALGORITHM_KEY_HEADER);
+                String algoType = this.serverSideAttack.getJwtTokenBean().getAlgorithm();
                 if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
                     String jwtFuzzedHeader =
                             String.format(JWT_HEADER_WITH_ALGO_PLACEHOLDER, HMAC_256);
@@ -265,7 +262,8 @@ public class SignatureFuzzer implements JWTFuzzer {
                                                 + JWTUtils.getBase64EncodedHMACSignedToken(
                                                         JWTUtils.getBytes(
                                                                 base64EncodedFuzzedHeaderAndPayload),
-                                                        publicKey.getEncoded()));
+                                                        publicKey.getEncoded(),
+                                                        HMAC_256));
                         if (executeAttack(
                                 clonedJWTokenBean.getBase64EncodedToken(), serverSideAttack)) {
                             raiseAlert(
