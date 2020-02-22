@@ -167,7 +167,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
 
                                     @Override
                                     public boolean accept(File f) {
-                                        return f.getName().endsWith(".p12");
+                                        return f.getName().endsWith(".p12") || f.isDirectory();
                                     }
                                 });
                         trustStoreFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);

@@ -55,7 +55,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.text.ParseException;
-import java.util.Objects;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -228,10 +228,10 @@ public class SignatureFuzzer implements JWTFuzzer {
         try {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             String trustStorePath = JWTConfiguration.getInstance().getTrustStorePath();
-            if (trustStorePath == null) {
+            if (StringUtils.isEmpty(trustStorePath)) {
                 trustStorePath = System.getProperty("javax.net.ssl.trustStore");
             }
-            if (Objects.nonNull(trustStorePath)) {
+            if (StringUtils.isNotEmpty(trustStorePath)) {
                 String algoType = this.serverSideAttack.getJwtTokenBean().getAlgorithm();
                 if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)) {
                     String jwtFuzzedHeader =
