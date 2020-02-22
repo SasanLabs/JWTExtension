@@ -89,7 +89,7 @@ public class JWTOptionsPanel extends AbstractParamPanel {
     /** Custom Fuzzers configuration */
     public JWTOptionsPanel() {
         super();
-        this.setName(JWTI18n.getMessage("jwt.toolmenu.settings"));
+        this.setName(JWTI18n.getMessage("jwt.settings.title"));
         this.setLayout(new BorderLayout());
         settingsPanel = new JPanel();
         settingsScrollPane =

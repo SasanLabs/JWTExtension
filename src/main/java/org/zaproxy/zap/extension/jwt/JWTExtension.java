@@ -60,7 +60,7 @@ public class JWTExtension extends ExtensionAdaptor {
         try {
             extensionHook.addOptionsParamSet(getJWTConfiguration());
             extensionHook.getHookView().addOptionPanel(new JWTOptionsPanel());
-            ZapMenuItem jwtActiveEditorMenu = new ZapMenuItem("jwt.toolmenu.scanner.configuration");
+            ZapMenuItem jwtActiveEditorMenu = new ZapMenuItem("jwt.toolmenu.settings");
             jwtActiveEditorMenu.addActionListener(
                     new ActionListener() {
                         @Override
@@ -89,5 +89,10 @@ public class JWTExtension extends ExtensionAdaptor {
     @Override
     public boolean canUnload() {
         return true;
+    }
+
+    @Override
+    public void stop() {
+        this.getJWTConfiguration().shutdownExecutorService();
     }
 }

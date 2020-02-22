@@ -49,7 +49,10 @@ import org.zaproxy.zap.extension.fuzz.payloads.ui.impl.FileStringPayloadGenerato
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTI18n;
 
-/** @author KSASAN preetkaran20@gmail.com */
+/**
+ * @author KSASAN preetkaran20@gmail.com
+ * @since TODO add version
+ */
 public class JWTSettingsUI extends JFrame {
 
     private static final long serialVersionUID = 1L;
@@ -60,7 +63,7 @@ public class JWTSettingsUI extends JFrame {
             JWTConfiguration.getInstance().getCustomFieldFuzzers();
 
     public JWTSettingsUI() {
-        setTitle(JWTI18n.getMessage("jwt.toolmenu.scanner.configuration"));
+        setTitle(JWTI18n.getMessage("jwt.settings.title"));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1000, 400);
         setLocationRelativeTo(null);
@@ -101,9 +104,6 @@ public class JWTSettingsUI extends JFrame {
     private void generalSettingsSection(GridBagConstraints gridBagConstraints) {
 
         gridBagConstraints.gridy++;
-
-        Insets insets = new Insets(5, 15, 5, 15);
-        gridBagConstraints.insets = insets;
         gridBagConstraints.gridx = 0;
         JLabel lblTargetSelection =
                 new JLabel(JWTI18n.getMessage("jwt.settings.general.customFuzz.jwtField.header"));
@@ -145,7 +145,7 @@ public class JWTSettingsUI extends JFrame {
                 });
 
         for (CustomFieldFuzzer customFieldFuzzer : this.customFieldFuzzers) {
-            insets = new Insets(5, 15, 5, 15);
+            Insets insets = new Insets(5, 15, 5, 15);
             gridBagConstraints.insets = insets;
             renderCustomFuzzFields(gridBagConstraints, customFieldFuzzer);
         }

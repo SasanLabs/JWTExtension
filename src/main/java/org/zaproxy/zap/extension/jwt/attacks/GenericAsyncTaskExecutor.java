@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
@@ -53,8 +52,7 @@ public class GenericAsyncTaskExecutor<T> {
             Predicate<T> predicate, Iterator<T> iterator, JWTActiveScanner jwtActiveScanner) {
         this.predicate = predicate;
         this.iterator = iterator;
-        int threadCount = JWTConfiguration.getInstance().getThreadCount();
-        this.executorService = Executors.newFixedThreadPool(threadCount);
+        executorService = JWTConfiguration.getInstance().getExecutorService();
         this.jwtActiveScanner = jwtActiveScanner;
     }
 
@@ -93,23 +91,19 @@ public class GenericAsyncTaskExecutor<T> {
     }
 
     public boolean execute() {
-        try {
-            if (isStop()) {
-                return isAttackSuccessful;
-            }
-            if (iterator != null) {
-                List<CompletableFuture<?>> completableFutures = new ArrayList<>();
-                while (iterator.hasNext()) {
-                    T value = iterator.next();
-                    if (!isStop()) {
-                        completableFutures.add(this.executeTaskAsync(value));
-                    }
-                }
-                waitForCompletion(completableFutures);
-            }
+        if (isStop()) {
             return isAttackSuccessful;
-        } finally {
-            executorService.shutdown();
         }
+        if (iterator != null) {
+            List<CompletableFuture<?>> completableFutures = new ArrayList<>();
+            while (iterator.hasNext()) {
+                T value = iterator.next();
+                if (!isStop()) {
+                    completableFutures.add(this.executeTaskAsync(value));
+                }
+            }
+            waitForCompletion(completableFutures);
+        }
+        return isAttackSuccessful;
     }
 }

@@ -21,12 +21,10 @@ package org.zaproxy.zap.extension.jwt.attacks;
 
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HMAC_ALGORITHM_IDENTIFIER;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.crypto.MACSigner;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.core.scanner.Alert;
@@ -64,13 +62,10 @@ import org.zaproxy.zap.utils.ResettableAutoCloseableIterator;
  */
 public class BruteforceAttack {
 
-    // TODO Characters allowed in secret
-    // For now fixing it but in future we need to move it to JWTConfigurations
     private static final String DEFAULT_SECRET_KEY_CHARACTERS =
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final Logger LOGGER = Logger.getLogger(JWTActiveScanner.class);
-    private String secretKeyCharacters = "abc";
-    private int hmacMaxKeyLength = DEFAULT_SECRET_KEY_CHARACTERS.length();
+    private int hmacMaxKeyLength;
     private static final String MESSAGE_PREFIX = "jwt.scanner.server.vulnerability.";
 
     private JWTTokenBean jwtTokenBean;
@@ -95,6 +90,7 @@ public class BruteforceAttack {
         this.jwtTokenBean = jwtTokenBean;
         this.param = param;
         this.msg = msg;
+        this.hmacMaxKeyLength = JWTConfiguration.getInstance().getHmacMaxKeyLength();
     }
 
     private void raiseAlert(String secretKey) {
@@ -115,13 +111,14 @@ public class BruteforceAttack {
                 this.msg);
     }
 
-    private void generatingHMACSecretKeyAndExecutingAttack(StringBuilder secretKey, int index) {
+    private void generatingHMACSecretKeyAndExecutingAttack(
+            StringBuilder secretKey, int index, int keyLength) {
         if (isStop()) {
             LOGGER.info(
                     "Stopping because either attack is successful or user has manually stopped the execution");
             return;
         }
-        if (index == hmacMaxKeyLength) {
+        if (index == keyLength) {
             permutedSecretKeys.add(secretKey.toString());
             if (permutedSecretKeys.size() >= 10) {
                 GenericAsyncTaskExecutor<String> genericAsyncTaskExecutor =
@@ -133,9 +130,11 @@ public class BruteforceAttack {
                 isAttackSuccessful = genericAsyncTaskExecutor.execute();
             }
         } else {
-            for (int i = 0; i < secretKeyCharacters.length(); i++) {
+            for (int i = 0; i < DEFAULT_SECRET_KEY_CHARACTERS.length(); i++) {
                 generatingHMACSecretKeyAndExecutingAttack(
-                        secretKey.append(secretKeyCharacters.charAt(i)), index + 1);
+                        secretKey.append(DEFAULT_SECRET_KEY_CHARACTERS.charAt(i)),
+                        index + 1,
+                        keyLength);
                 secretKey.deleteCharAt(index);
             }
         }
@@ -149,14 +148,14 @@ public class BruteforceAttack {
     }
 
     private void permutationBasedHMACSecretKeyBruteForce() {
-        StringBuilder secretKey = new StringBuilder();
-
-        this.generatingHMACSecretKeyAndExecutingAttack(secretKey, 0);
         if (isStop()) {
             LOGGER.info(
                     "Stopping because either attack is successful or user has manually stopped the execution");
             return;
         } else {
+            for (int i = 1; i < this.hmacMaxKeyLength; i++) {
+                this.generatingHMACSecretKeyAndExecutingAttack(new StringBuilder(), 0, i);
+            }
             if (permutedSecretKeys.size() > 0) {
                 GenericAsyncTaskExecutor<String> genericAsyncTaskExecutor =
                         new GenericAsyncTaskExecutor<String>(
@@ -197,6 +196,9 @@ public class BruteforceAttack {
     }
 
     private void fileBasedHMACSecretKeyBruteForce() {
+        if (Objects.isNull(JWTConfiguration.getInstance().getPayloadGenerator())) {
+            return;
+        }
         ResettableAutoCloseableIterator<DefaultPayload> resettableAutoCloseableIterator =
                 JWTConfiguration.getInstance().getPayloadGenerator().iterator();
         Predicate<DefaultPayload> wrappedPredicateForVerifyingSecretKey =
@@ -215,21 +217,6 @@ public class BruteforceAttack {
     public boolean execute() {
         String algoType = this.jwtTokenBean.getAlgorithm();
         if (algoType.startsWith(JWT_HMAC_ALGORITHM_IDENTIFIER)) {
-            try {
-                int minimumRequiredKeyLength =
-                        MACSigner.getMinRequiredSecretLength(JWSAlgorithm.parse(algoType));
-                if (minimumRequiredKeyLength > this.hmacMaxKeyLength) {
-                    LOGGER.info(
-                            "Provided Key Length is "
-                                    + this.hmacMaxKeyLength
-                                    + " smaller than required Key Length "
-                                    + minimumRequiredKeyLength
-                                    + ". Hence overriding it");
-                    this.hmacMaxKeyLength = minimumRequiredKeyLength;
-                }
-            } catch (JOSEException e) {
-                LOGGER.error("Unable to get the Minimum Required Key Length.", e);
-            }
             this.fileBasedHMACSecretKeyBruteForce();
             this.permutationBasedHMACSecretKeyBruteForce();
             if (this.isAttackSuccessful) {
