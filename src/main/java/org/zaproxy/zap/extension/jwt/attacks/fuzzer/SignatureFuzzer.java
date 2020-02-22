@@ -22,7 +22,6 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.HMAC_256;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JSON_WEB_KEY_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EC_ALGORITHM_IDENTIFIER;
-import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_EXP_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HEADER_WITH_ALGO_PLACEHOLDER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_OCTET_ALGORITHM_IDENTIFIER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_RSA_ALGORITHM_IDENTIFIER;
@@ -173,11 +172,12 @@ public class SignatureFuzzer implements JWTFuzzer {
             return false;
         }
 
-        if (payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
-            long expiryTimeInMillis = payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
-            expiryTimeInMillis = expiryTimeInMillis + 2000;
-            payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
-        }
+        //        if (payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
+        //            long expiryTimeInMillis =
+        // payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
+        //            expiryTimeInMillis = expiryTimeInMillis + 2000;
+        //            payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
+        //        }
 
         if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
                 || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER)) {

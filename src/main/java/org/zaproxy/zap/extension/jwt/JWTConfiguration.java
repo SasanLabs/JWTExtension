@@ -27,6 +27,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.common.AbstractParam;
 import org.zaproxy.zap.extension.fuzz.payloads.generator.FileStringPayloadGenerator;
@@ -109,8 +112,8 @@ public class JWTConfiguration extends AbstractParam {
     private boolean ignoreClientConfigurationScan;
     private FileStringPayloadGeneratorUI fileStringPayloadGeneratorUI;
     private List<CustomFieldFuzzer> customFieldFuzzers = new ArrayList<CustomFieldFuzzer>();
-
     private static volatile JWTConfiguration jwtConfiguration;
+    private ExecutorService executorService;
 
     private JWTConfiguration() {}
 
@@ -134,11 +137,27 @@ public class JWTConfiguration extends AbstractParam {
         this.getConfig().setProperty(PARAM_TRUST_STORE_PATH, trustStorePath);
     }
 
+    public ExecutorService getExecutorService() {
+        executorService =
+                executorService == null
+                        ? Executors.newFixedThreadPool(this.threadCount)
+                        : executorService;
+        return executorService;
+    }
+
     public int getThreadCount() {
         return threadCount;
     }
 
+    public void shutdownExecutorService() {
+        if (executorService != null) {
+            executorService.shutdown();
+            executorService = null;
+        }
+    }
+
     public void setThreadCount(int threadCount) {
+        this.shutdownExecutorService();
         this.threadCount = threadCount;
         this.getConfig().setProperty(PARAM_THREAD_COUNT, threadCount);
     }
@@ -328,7 +347,9 @@ public class JWTConfiguration extends AbstractParam {
     }
 
     public FileStringPayloadGenerator getPayloadGenerator() {
-        return this.fileStringPayloadGeneratorUI.getPayloadGenerator();
+        return Objects.isNull(this.fileStringPayloadGeneratorUI)
+                ? null
+                : this.fileStringPayloadGeneratorUI.getPayloadGenerator();
     }
 
     @Override
@@ -386,7 +407,10 @@ public class JWTConfiguration extends AbstractParam {
                     getConfig()
                             .getBoolean(PARAM_IS_SIGNATURE_REQUIRED_CUSTOM_FIELD_FUZZER + index));
             String fileUri =
-                    getConfig().getString(PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE_CUSTOM_FIELD_FUZZER + index);
+                    getConfig()
+                            .getString(
+                                    PARAM_FILE_PAYLOAD_GENERATOR_UI_FILE_CUSTOM_FIELD_FUZZER
+                                            + index);
             if (fileUri != null) {
                 try {
                     Path file = Paths.get(new URI(fileUri));

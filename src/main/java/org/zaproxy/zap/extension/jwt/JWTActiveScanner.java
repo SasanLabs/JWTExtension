@@ -64,16 +64,16 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
     public void init() {
         switch (this.getAttackStrength()) {
             case LOW:
-                maxRequestCount = new AtomicInteger(12);
+                maxRequestCount = new AtomicInteger(120);
                 break;
             case MEDIUM:
-                maxRequestCount = new AtomicInteger(25);
+                maxRequestCount = new AtomicInteger(250);
                 break;
             case HIGH:
-                maxRequestCount = new AtomicInteger(50);
+                maxRequestCount = new AtomicInteger(500);
                 break;
             case INSANE:
-                maxRequestCount = new AtomicInteger(100);
+                maxRequestCount = new AtomicInteger(10000000);
                 break;
             default:
                 break;

@@ -34,7 +34,7 @@ public class CustomFieldFuzzer {
     private String fieldName;
 
     /** fieldName is present in Header or Payload */
-    private boolean isHeaderField;
+    private boolean isHeaderField = true;
 
     private boolean isSignatureRequired;
 
