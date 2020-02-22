@@ -172,13 +172,6 @@ public class SignatureFuzzer implements JWTFuzzer {
             return false;
         }
 
-        //        if (payloadJSONObject.has(JWT_EXP_ALGORITHM_IDENTIFIER)) {
-        //            long expiryTimeInMillis =
-        // payloadJSONObject.getLong(JWT_EXP_ALGORITHM_IDENTIFIER);
-        //            expiryTimeInMillis = expiryTimeInMillis + 2000;
-        //            payloadJSONObject.put(JWT_EXP_ALGORITHM_IDENTIFIER, expiryTimeInMillis);
-        //        }
-
         if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
                 || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER)) {
             // Generating JWK
