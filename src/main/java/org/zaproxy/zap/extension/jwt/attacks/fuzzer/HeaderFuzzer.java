@@ -24,11 +24,6 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWK_SET_URL_HEADE
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.KEY_ID_HEADER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NONE_ALGORITHM_VARIANTS;
 
-import com.nimbusds.jose.JOSEException;
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -41,6 +36,7 @@ import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.attacks.GenericAsyncTaskExecutor;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
+import org.zaproxy.zap.extension.jwt.exception.JWTException;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
@@ -61,19 +57,15 @@ public class HeaderFuzzer implements JWTFuzzer {
 
     private boolean executeAttackAndRaiseAlert(
             JWTTokenBean clonJWTTokenBean, VulnerabilityType vulnerabilityType) {
-        try {
-            if (executeAttack(clonJWTTokenBean.getBase64EncodedToken(), serverSideAttack)) {
-                raiseAlert(
-                        MESSAGE_PREFIX,
-                        vulnerabilityType,
-                        Alert.RISK_HIGH,
-                        Alert.CONFIDENCE_HIGH,
-                        clonJWTTokenBean.getBase64EncodedToken(),
-                        serverSideAttack);
-                return true;
-            }
-        } catch (UnsupportedEncodingException e) {
-            LOGGER.error("Following exception occurred: ", e);
+        if (executeAttack(clonJWTTokenBean.getBase64EncodedToken(), serverSideAttack)) {
+            raiseAlert(
+                    MESSAGE_PREFIX,
+                    vulnerabilityType,
+                    Alert.RISK_HIGH,
+                    Alert.CONFIDENCE_HIGH,
+                    clonJWTTokenBean.getBase64EncodedToken(),
+                    serverSideAttack);
+            return true;
         }
         return false;
     }
@@ -106,11 +98,7 @@ public class HeaderFuzzer implements JWTFuzzer {
                                         return executeAttackAndRaiseAlert(
                                                 clonedJWTokenBean,
                                                 VulnerabilityType.CUSTOM_PAYLOAD);
-                                    } catch (UnsupportedEncodingException
-                                            | ParseException
-                                            | JOSEException
-                                            | NoSuchAlgorithmException
-                                            | InvalidKeySpecException e) {
+                                    } catch (JWTException e) {
                                         LOGGER.error(
                                                 "Failed while signing the clonedJWTTokenBean:", e);
                                     }

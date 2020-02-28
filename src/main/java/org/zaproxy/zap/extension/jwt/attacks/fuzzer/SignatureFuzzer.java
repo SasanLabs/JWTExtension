@@ -47,7 +47,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -57,14 +56,13 @@ import java.security.cert.CertificateException;
 import java.text.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
-import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
+import org.zaproxy.zap.extension.jwt.exception.JWTException;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 
@@ -87,9 +85,9 @@ public class SignatureFuzzer implements JWTFuzzer {
      * gist of attack is say validator is vulnerable to null byte hence if anything is appended
      * after null byte will be ignored.
      *
-     * @throws UnsupportedEncodingException
+     * @throws JWTException
      */
-    private boolean executeNullByteFuzzTokens() throws UnsupportedEncodingException {
+    private boolean executeNullByteFuzzTokens() throws JWTException {
         // Appends signature with NullByte plus ZAP eyeCather.
         JWTTokenBean cloneJWTTokenBean = new JWTTokenBean(this.serverSideAttack.getJwtTokenBean());
         if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
@@ -156,12 +154,9 @@ public class SignatureFuzzer implements JWTFuzzer {
      *
      * @param jwtTokenBean
      * @param vulnerabilityTypeAndFuzzedTokens
-     * @throws NoSuchAlgorithmException
-     * @throws JOSEException
-     * @throws ParseException
+     * @throws JWTException
      */
-    public boolean executeCustomPrivateKeySignedFuzzToken()
-            throws NoSuchAlgorithmException, JOSEException, ParseException {
+    public boolean executeCustomPrivateKeySignedFuzzToken() throws JWTException {
         JSONObject headerJSONObject =
                 new JSONObject(this.serverSideAttack.getJwtTokenBean().getHeader());
         JSONObject payloadJSONObject =
@@ -171,45 +166,51 @@ public class SignatureFuzzer implements JWTFuzzer {
         if (this.serverSideAttack.getJwtActiveScanner().isStop()) {
             return false;
         }
-
-        if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
-                || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER)) {
-            // Generating JWK
-            RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
-            rsaKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
-            RSAKey rsaKey = rsaKeyGenerator.generate();
-
-            headerJSONObject.put(JSON_WEB_KEY_HEADER, rsaKey.toPublicJWK().toJSONObject());
-            if (signJWTAndExecuteAttack(
-                    new RSASSASigner(rsaKey), headerJSONObject, payloadJSONObject)) {
-                return true;
-            }
-        } else if (algoType.startsWith(JWT_EC_ALGORITHM_IDENTIFIER)
-                || algoType.startsWith(JWT_OCTET_ALGORITHM_IDENTIFIER)) {
-            for (Curve curve : Curve.forJWSAlgorithm(JWSAlgorithm.parse(algoType))) {
-                if (curve == null) {
-                    continue;
-                }
+        try {
+            if (algoType.startsWith(JWT_RSA_ALGORITHM_IDENTIFIER)
+                    || algoType.startsWith(JWT_RSA_PSS_ALGORITHM_IDENTIFIER)) {
                 // Generating JWK
-                JWSSigner jwsSigner = null;
-                if (algoType.startsWith(JWT_EC_ALGORITHM_IDENTIFIER)) {
-                    ECKeyGenerator ecKeyGenerator = new ECKeyGenerator(curve);
-                    ecKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
-                    ECKey ecKey = ecKeyGenerator.generate();
-                    headerJSONObject.put(JSON_WEB_KEY_HEADER, ecKey.toPublicJWK().toJSONObject());
-                    jwsSigner = new ECDSASigner(ecKey);
-                } else {
-                    OctetKeyPairGenerator octetKeyPairGenerator = new OctetKeyPairGenerator(curve);
-                    octetKeyPairGenerator.algorithm(JWSAlgorithm.parse(algoType));
-                    OctetKeyPair octetKey = octetKeyPairGenerator.generate();
-                    headerJSONObject.put(
-                            JSON_WEB_KEY_HEADER, octetKey.toPublicJWK().toJSONObject());
-                    jwsSigner = new Ed25519Signer(octetKey);
-                }
-                if (this.signJWTAndExecuteAttack(jwsSigner, headerJSONObject, payloadJSONObject)) {
+                RSAKeyGenerator rsaKeyGenerator = new RSAKeyGenerator(2048);
+                rsaKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
+                RSAKey rsaKey = rsaKeyGenerator.generate();
+
+                headerJSONObject.put(JSON_WEB_KEY_HEADER, rsaKey.toPublicJWK().toJSONObject());
+                if (signJWTAndExecuteAttack(
+                        new RSASSASigner(rsaKey), headerJSONObject, payloadJSONObject)) {
                     return true;
                 }
+            } else if (algoType.startsWith(JWT_EC_ALGORITHM_IDENTIFIER)
+                    || algoType.startsWith(JWT_OCTET_ALGORITHM_IDENTIFIER)) {
+                for (Curve curve : Curve.forJWSAlgorithm(JWSAlgorithm.parse(algoType))) {
+                    if (curve == null) {
+                        continue;
+                    }
+                    // Generating JWK
+                    JWSSigner jwsSigner = null;
+                    if (algoType.startsWith(JWT_EC_ALGORITHM_IDENTIFIER)) {
+                        ECKeyGenerator ecKeyGenerator = new ECKeyGenerator(curve);
+                        ecKeyGenerator.algorithm(JWSAlgorithm.parse(algoType));
+                        ECKey ecKey = ecKeyGenerator.generate();
+                        headerJSONObject.put(
+                                JSON_WEB_KEY_HEADER, ecKey.toPublicJWK().toJSONObject());
+                        jwsSigner = new ECDSASigner(ecKey);
+                    } else {
+                        OctetKeyPairGenerator octetKeyPairGenerator =
+                                new OctetKeyPairGenerator(curve);
+                        octetKeyPairGenerator.algorithm(JWSAlgorithm.parse(algoType));
+                        OctetKeyPair octetKey = octetKeyPairGenerator.generate();
+                        headerJSONObject.put(
+                                JSON_WEB_KEY_HEADER, octetKey.toPublicJWK().toJSONObject());
+                        jwsSigner = new Ed25519Signer(octetKey);
+                    }
+                    if (this.signJWTAndExecuteAttack(
+                            jwsSigner, headerJSONObject, payloadJSONObject)) {
+                        return true;
+                    }
+                }
             }
+        } catch (JOSEException | ParseException e) {
+            throw new JWTException("Following exception occurred:", e);
         }
         return false;
     }
@@ -223,8 +224,10 @@ public class SignatureFuzzer implements JWTFuzzer {
      * case jwttoken is based on HMAC algorithm then verify method will think key as Secret key for
      * HMAC and will try to decrypt it and as public key is known to everyone so anyone can sign the
      * key with public key and HMAC will accept it.
+     *
+     * @throws JWTException
      */
-    private boolean executeAlgoKeyConfusionFuzzedToken() {
+    private boolean executeAlgoKeyConfusionFuzzedToken() throws JWTException {
         try {
             KeyStore keyStore = KeyStore.getInstance("PKCS12");
             String trustStorePath = JWTConfiguration.getInstance().getTrustStorePath();
@@ -271,12 +274,12 @@ public class SignatureFuzzer implements JWTFuzzer {
                     }
                 }
             }
-        } catch (JWTExtensionValidationException
-                | KeyStoreException
+        } catch (KeyStoreException
                 | NoSuchAlgorithmException
                 | CertificateException
                 | IOException e) {
-            LOGGER.error("Exception occurred while getting fuzzed token for confusion scenario", e);
+            new JWTException(
+                    "Exception occurred while getting fuzzed token for confusion scenario", e);
         }
         return false;
     }
@@ -288,11 +291,7 @@ public class SignatureFuzzer implements JWTFuzzer {
             return this.executeCustomPrivateKeySignedFuzzToken()
                     || this.executeAlgoKeyConfusionFuzzedToken()
                     || this.executeNullByteFuzzTokens();
-        } catch (NoSuchAlgorithmException
-                | JSONException
-                | IOException
-                | JOSEException
-                | ParseException e) {
+        } catch (JWTException e) {
             LOGGER.error("error occurred while getting signed fuzzed tokens", e);
         }
         return false;

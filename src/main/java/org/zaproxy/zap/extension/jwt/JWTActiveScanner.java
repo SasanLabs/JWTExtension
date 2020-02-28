@@ -27,6 +27,7 @@ import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.zap.extension.jwt.attacks.BruteforceAttack;
 import org.zaproxy.zap.extension.jwt.attacks.ClientSideAttack;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
+import org.zaproxy.zap.extension.jwt.exception.JWTException;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.model.TechSet;
 
@@ -100,7 +101,7 @@ public class JWTActiveScanner extends AbstractAppParamPlugin {
         JWTTokenBean jwtTokenBean;
         try {
             jwtTokenBean = JWTTokenBean.parseJWTToken(newValue);
-        } catch (JWTExtensionValidationException e) {
+        } catch (JWTException e) {
             LOGGER.error("Unable to parse JWT Token", e);
             return;
         }

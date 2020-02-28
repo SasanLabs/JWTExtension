@@ -21,7 +21,6 @@ package org.zaproxy.zap.extension.jwt.attacks;
 
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_HMAC_ALGORITHM_IDENTIFIER;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -32,9 +31,9 @@ import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.zap.extension.fuzz.payloads.DefaultPayload;
 import org.zaproxy.zap.extension.jwt.JWTActiveScanner;
 import org.zaproxy.zap.extension.jwt.JWTConfiguration;
-import org.zaproxy.zap.extension.jwt.JWTExtensionValidationException;
 import org.zaproxy.zap.extension.jwt.JWTI18n;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
+import org.zaproxy.zap.extension.jwt.exception.JWTException;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 import org.zaproxy.zap.extension.jwt.utils.VulnerabilityType;
 import org.zaproxy.zap.utils.ResettableAutoCloseableIterator;
@@ -187,7 +186,7 @@ public class BruteforceAttack {
                             raiseAlert(secretKey);
                             return true;
                         }
-                    } catch (UnsupportedEncodingException | JWTExtensionValidationException e) {
+                    } catch (JWTException e) {
                         LOGGER.error("Error occurred while generating Signed Token", e);
                     }
                     return false;
