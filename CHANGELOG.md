@@ -6,5 +6,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## 1 - 2013-10-08
 
 - First version
-
-[8]: https://github.com/zaproxy/zap-extensions/releases/saml-v8
+Containing basic JWT related fuzzers etc.
