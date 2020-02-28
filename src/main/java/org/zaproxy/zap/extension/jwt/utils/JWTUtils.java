@@ -35,7 +35,6 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
@@ -140,7 +139,6 @@ public class JWTUtils {
      * @param algorithm
      * @return
      * @throws JWTException
-     * @throws UnsupportedEncodingException
      */
     public static String getBase64EncodedHMACSignedToken(
             byte[] token, byte[] secretKey, String algorithm) throws JWTException {
@@ -202,11 +200,7 @@ public class JWTUtils {
     /**
      * @param customFieldFuzzer
      * @param clonedJWTokenBean
-     * @throws ParseException
-     * @throws JOSEException
-     * @throws UnsupportedEncodingException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeySpecException
+     * @throws JWTException
      */
     public static void handleSigningOfTokenCustomFieldFuzzer(
             CustomFieldFuzzer customFieldFuzzer, JWTTokenBean clonedJWTokenBean)

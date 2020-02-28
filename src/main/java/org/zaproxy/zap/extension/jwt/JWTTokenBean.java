@@ -23,7 +23,6 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_ALGORITHM_KEY
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER;
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_CHARACTER_REGEX;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Base64;
 import org.json.JSONObject;
 import org.zaproxy.zap.extension.jwt.exception.JWTException;
@@ -124,7 +123,6 @@ public class JWTTokenBean {
      *
      * @param jwtToken
      * @return JWTTokenBean
-     * @throws UnsupportedEncodingException
      * @throws JWTException
      */
     public static JWTTokenBean parseJWTToken(String jwtToken) throws JWTException {
