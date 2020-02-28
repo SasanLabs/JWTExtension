@@ -17,21 +17,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.zaproxy.zap.extension.jwt;
+package org.zaproxy.zap.extension.jwt.exception;
 
 /**
  * @author KSASAN preetkaran20@gmail.com
  * @since TODO add version
  */
-public class JWTExtensionValidationException extends Exception {
+public class JWTException extends Exception {
 
     private static final long serialVersionUID = 372527297369183960L;
 
-    public JWTExtensionValidationException(String message) {
+    public JWTException(String message) {
         super(message);
     }
 
-    public JWTExtensionValidationException(String message, Throwable throwable) {
+    public JWTException(String message, Throwable throwable) {
         super(message, throwable);
     }
 }

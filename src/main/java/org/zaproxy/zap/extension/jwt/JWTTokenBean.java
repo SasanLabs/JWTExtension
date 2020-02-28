@@ -26,6 +26,7 @@ import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.JWT_TOKEN_PERIOD_
 import java.io.UnsupportedEncodingException;
 import java.util.Base64;
 import org.json.JSONObject;
+import org.zaproxy.zap.extension.jwt.exception.JWTException;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
 
 /**
@@ -96,9 +97,8 @@ public class JWTTokenBean {
      * href="https://www.rfc-editor.org/rfc/rfc7515.txt">RFC 7515</a> padding is not there in JWT.
      *
      * @return
-     * @throws UnsupportedEncodingException
      */
-    public String getBase64EncodedToken() throws UnsupportedEncodingException {
+    public String getBase64EncodedToken() {
         String base64EncodedHeader = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(header);
         String base64EncodedPayload = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(payload);
         String base64EncodedSignature =
@@ -110,11 +110,8 @@ public class JWTTokenBean {
                 + base64EncodedSignature;
     }
 
-    /**
-     * @return token to be Signed i.e. base64EncodedHeader.base64EncodedPayload
-     * @throws UnsupportedEncodingException
-     */
-    public String getBase64EncodedTokenWithoutSignature() throws UnsupportedEncodingException {
+    /** @return token to be Signed i.e. base64EncodedHeader.base64EncodedPayload */
+    public String getBase64EncodedTokenWithoutSignature() {
         String base64EncodedHeader = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(header);
         String base64EncodedPayload = JWTUtils.getBase64UrlSafeWithoutPaddingEncodedString(payload);
         return base64EncodedHeader + JWT_TOKEN_PERIOD_CHARACTER + base64EncodedPayload;
@@ -128,12 +125,11 @@ public class JWTTokenBean {
      * @param jwtToken
      * @return JWTTokenBean
      * @throws UnsupportedEncodingException
-     * @throws JWTExtensionValidationException
+     * @throws JWTException
      */
-    public static JWTTokenBean parseJWTToken(String jwtToken)
-            throws JWTExtensionValidationException {
+    public static JWTTokenBean parseJWTToken(String jwtToken) throws JWTException {
         if (!JWTUtils.isTokenValid(jwtToken)) {
-            throw new JWTExtensionValidationException("JWT token:" + jwtToken + " is not valid");
+            throw new JWTException("JWT token:" + jwtToken + " is not valid");
         }
         JWTTokenBean jwtTokenBean = new JWTTokenBean();
         String[] tokens = jwtToken.split(JWT_TOKEN_PERIOD_CHARACTER_REGEX, -1);

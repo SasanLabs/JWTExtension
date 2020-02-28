@@ -21,11 +21,6 @@ package org.zaproxy.zap.extension.jwt.attacks.fuzzer;
 
 import static org.zaproxy.zap.extension.jwt.utils.JWTConstants.NULL_BYTE_CHARACTER;
 
-import com.nimbusds.jose.JOSEException;
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.text.ParseException;
 import java.util.List;
 import java.util.function.Predicate;
 import net.sf.json.JSONException;
@@ -39,6 +34,7 @@ import org.zaproxy.zap.extension.jwt.JWTConfiguration;
 import org.zaproxy.zap.extension.jwt.JWTTokenBean;
 import org.zaproxy.zap.extension.jwt.attacks.GenericAsyncTaskExecutor;
 import org.zaproxy.zap.extension.jwt.attacks.ServerSideAttack;
+import org.zaproxy.zap.extension.jwt.exception.JWTException;
 import org.zaproxy.zap.extension.jwt.ui.CustomFieldFuzzer;
 import org.zaproxy.zap.extension.jwt.utils.JWTConstants;
 import org.zaproxy.zap.extension.jwt.utils.JWTUtils;
@@ -97,25 +93,15 @@ public class PayloadFuzzer implements JWTFuzzer {
                                         return executAttackAndRaiseAlert(
                                                 clonedJWTokenBean.getBase64EncodedToken(),
                                                 VulnerabilityType.CUSTOM_PAYLOAD);
-                                    } catch (UnsupportedEncodingException
-                                            | ParseException
-                                            | JOSEException
-                                            | NoSuchAlgorithmException
-                                            | InvalidKeySpecException e) {
+                                    } catch (JWTException e) {
                                         LOGGER.error(
                                                 "Failed while signing the clonedJWTTokenBean:", e);
                                     }
                                     return false;
                                 } else {
-                                    try {
-                                        return executAttackAndRaiseAlert(
-                                                clonedJWTokenBean.getBase64EncodedToken(),
-                                                VulnerabilityType.CUSTOM_PAYLOAD);
-                                    } catch (UnsupportedEncodingException e) {
-                                        LOGGER.error(
-                                                "Failed while signing the clonedJWTTokenBean:", e);
-                                    }
-                                    return false;
+                                    return executAttackAndRaiseAlert(
+                                            clonedJWTokenBean.getBase64EncodedToken(),
+                                            VulnerabilityType.CUSTOM_PAYLOAD);
                                 }
                             } else {
                                 return false;
@@ -179,8 +165,6 @@ public class PayloadFuzzer implements JWTFuzzer {
         } catch (JSONException e) {
             // Payload can be json or any other format as per specification
             LOGGER.error("Payload is not a valid JSON Object", e);
-        } catch (UnsupportedEncodingException e) {
-            LOGGER.error("Exception occurred while getting the base64 urlsafe encoded token", e);
         }
         return false;
     }
